@@ -20,7 +20,10 @@ return new class extends Migration
             $table->string('password');
 
             $table->string('phone')->nullable();
-            $table->string('role')->default('user'); // user / admin
+            $table->enum('role', [
+                'user',
+                'admin'
+            ])->default('user');
             $table->string('avatar')->nullable();
 
             // Laravel default

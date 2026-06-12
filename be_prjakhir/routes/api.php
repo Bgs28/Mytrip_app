@@ -2,27 +2,92 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\FlightController;
+use App\Http\Controllers\Api\HotelController;
+use App\Http\Controllers\Api\TrainController;
+use App\Http\Controllers\Api\BusController;
+use App\Http\Controllers\Api\BookingController;
+use App\Http\Controllers\Api\AuthController;
+
 use App\Http\Controllers\UserController;
+use App\Models\Booking;
 
-Route::get('/user', function (Request $request) {
-    return $request->user();
-})->middleware('auth:sanctum');
+// AUTH
+Route::post('/register',[AuthController::class,'register']);
+Route::post('/login', [AuthController::class, 'login']);
 
-// Untuk lihat semua user
-Route::get('/users', [UserController::class, 'index']);
+// DATA TRAVEL
 
-// Untuk tambah user
-Route::post('/users', [UserController::class, 'store']);
+Route::get('/flights',
+[
+    FlightController::class,
+    'index'
+]);
 
-// Untuk hapus user
-Route::delete('/users/{id}', [UserController::class, 'destroy']);
 
-// Update pakai PUT atau PATCH
-Route::put('/users/{id}', [UserController::class, 'update']);
+Route::get('/hotels',
+[
+    HotelController::class,
+    'index'
+]);
 
-// Hapus pakai DELETE
-Route::delete('/users/{id}', [UserController::class, 'destroy']);
 
-// login
-Route::post('/login', [UserController::class, 'login']);
+Route::get('/trains',
+[
+    TrainController::class,
+    'index'
+]);
 
+
+Route::get('/buses',
+[
+    BusController::class,
+    'index'
+]);
+
+
+// USER PROFILE (butuh token)
+
+Route::middleware('auth:sanctum')
+->group(function(){
+
+
+    Route::get('/user', function(
+        Request $request
+    ){
+        return $request->user();
+    });
+
+
+});
+
+Route::middleware('auth:sanctum')
+->group(function(){
+
+    // buat booking
+    Route::post(
+        '/bookings',
+        [
+            BookingController::class,
+            'store'
+        ]
+    );
+
+    // history user
+    Route::get(
+        '/history',
+        [
+            BookingController::class,
+            'history'
+        ]
+    );
+
+    // detail booking
+    Route::get(
+        '/booking/{id}',
+        [
+            BookingController::class,
+            'show'
+        ]
+    );
+});
