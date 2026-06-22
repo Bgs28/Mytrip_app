@@ -5,61 +5,103 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 
 class UserController extends Controller
 {
+    // Menampilkan daftar user
     public function index()
     {
-        return response()->json(User::all());
+        $users = User::latest()->paginate(10);
+        return view('admin.user.index', compact('users'));
     }
 
-    // Tambah User
-    public function store(Request $request) {
-        $user = User::create([
+    // Menampilkan form tambah user
+    public function create()
+    {
+        return view('admin.user.create');
+    }
+
+    // Menyimpan user baru ke database
+    public function store(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users',
+            'password' => 'required|string|min:8|confirmed',
+            'phone' => 'nullable|string|max:20',
+            'role' => 'required|in:user,admin',
+            'avatar' => 'nullable|image|mimes:jpeg,png,jpg|max:2048'
+        ]);
+
+        $avatarPath = null;
+        if ($request->hasFile('avatar')) {
+            $avatarPath = $request->file('avatar')->store('avatars', 'public');
+        }
+
+        User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
+            'phone' => $request->phone,
+            'role' => $request->role,
+            'avatar' => $avatarPath,
         ]);
-        return response()->json(['message' => 'User berhasil ditambah!', 'data' => $user]);
+
+        return redirect()->route('admin.users.index')->with('success', 'User berhasil ditambahkan.');
     }
 
-    // Hapus User
-    public function destroy($id) {
-        $user = User::find($id);
-        if(!$user) return response()->json(['message' => 'User tidak ketemu'], 404);
+    // Menampilkan form edit user
+    public function edit(User $user)
+    {
+        return view('admin.user.edit', compact('user'));
+    }
 
+    // Memperbarui data user
+    public function update(Request $request, User $user)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
+            'password' => 'nullable|string|min:8|confirmed',
+            'phone' => 'nullable|string|max:20',
+            'role' => 'required|in:user,admin',
+            'avatar' => 'nullable|image|mimes:jpeg,png,jpg|max:2048'
+        ]);
+
+        $data = [
+            'name' => $request->name,
+            'email' => $request->email,
+            'phone' => $request->phone,
+            'role' => $request->role,
+        ];
+
+        if ($request->filled('password')) {
+            $data['password'] = Hash::make($request->password);
+        }
+
+        if ($request->hasFile('avatar')) {
+            // Hapus avatar lama jika ada
+            if ($user->avatar) {
+                Storage::disk('public')->delete($user->avatar);
+            }
+            $data['avatar'] = $request->file('avatar')->store('avatars', 'public');
+        }
+
+        $user->update($data);
+
+        return redirect()->route('admin.users.index')->with('success', 'User berhasil diperbarui.');
+    }
+
+    // Menghapus user
+    public function destroy(User $user)
+    {
+        if ($user->avatar) {
+            Storage::disk('public')->delete($user->avatar);
+        }
+        
         $user->delete();
-        return response()->json(['message' => 'User berhasil dihapus']);
+
+        return redirect()->route('admin.users.index')->with('success', 'User berhasil dihapus.');
     }
-
-    public function update(Request $request, $id)
-{
-    $user = User::find($id);
-
-    if (!$user) {
-        return response()->json(['message' => 'User tidak ditemukan'], 404);
-    }
-
-    $request->validate([
-        'name' => 'required',
-        'email' => 'required|email',
-        'password' => 'nullable|min:6',
-    ]);
-
-    $user->name = $request->name;
-    $user->email = $request->email;
-
-    if ($request->password) {
-        $user->password = Hash::make($request->password);
-    }
-
-    $user->save();
-
-    return response()->json([
-        'message' => 'User berhasil diupdate',
-        'data' => $user
-    ]);
 }
-}
-
-    
