@@ -5,6 +5,8 @@ use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\Admin\HotelController;
+use App\Http\Controllers\Admin\TrainController;
+use App\Http\Controllers\Admin\BusController;
 
 // Web Routes - Admin Panel
 
@@ -28,7 +30,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // CRUD Kelola Hotel
         Route::resource('hotels', HotelController::class);
+
+        // CRUD kelola Train
+        Route::resource('trains', TrainController::class);
         
+        // CRUD kelola Bus
+        Route::resource('buses', BusController::class);
+
         // Logout Admin
         Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
         

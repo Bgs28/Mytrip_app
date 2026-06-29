@@ -12,6 +12,12 @@
         <a href="{{ route('admin.hotels.index') }}" class="flex items-center px-4 py-3 rounded-xl font-medium transition-all {{ request()->routeIs('admin.hotels.*') ? 'bg-blue-800 text-white' : 'text-blue-200 hover:bg-blue-800 hover:text-white' }}">
             <span>Data Hotel</span>
         </a>
+        <a href="{{ route('admin.trains.index') }}" class="flex items-center px-4 py-3 rounded-xl font-medium transition-all {{ request()->routeIs('admin.hotels.*') ? 'bg-blue-800 text-white' : 'text-blue-200 hover:bg-blue-800 hover:text-white' }}">
+            <span>Data Kereta</span>
+        </a>
+        <a href="{{ route('admin.buses.index') }}" class="flex items-center px-4 py-3 rounded-xl font-medium transition-all {{ request()->routeIs('admin.hotels.*') ? 'bg-blue-800 text-white' : 'text-blue-200 hover:bg-blue-800 hover:text-white' }}">
+            <span>Data Bus</span>
+        </a>
         </a>
     </nav>
 </aside>

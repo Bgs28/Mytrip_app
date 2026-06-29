@@ -24,7 +24,7 @@ class HotelController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|max|max:255',
+            'name' => 'required|string|max:255',
             'location' => 'required|string|max:255',
             'description' => 'nullable|string',
             'price' => 'required|integer|min:0',
