@@ -7,72 +7,75 @@ use App\Models\Booking;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
-
 class BookingController extends Controller
 {
-    // user membaut booking
-    public function store(Request $request){
+    // User membuat booking dari Flutter
+    public function store(Request $request)
+    {
         $request->validate([
-            'type'=> 'required',
-            'item_id'=> 'required',
-            'total_price'=> 'required',
+            'type'        => 'required|in:bus,train,hotel',
+            'item_id'     => 'required',
+            'total_price' => 'required|numeric',
         ]);
 
         $booking = Booking::create([
-            'user_id'=>$request->user()->id(),
-            
-            'type'=>$request->type,
-
-            'item_id'=>$request->item_id,
-
-            'booking_code'=>'MYT - '
-                .strtoupper(Str::random(8)),
-
-            'total_price'=>$request->total_price,
-
-            'status'=>'pending',
+            'user_id'      => $request->user()->id, // FIX: Menggunakan property id, bukan method id()
+            'type'         => $request->type,
+            'item_id'      => $request->item_id,
+            'booking_code' => 'MYT-' . strtoupper(Str::random(8)),
+            'total_price'  => $request->total_price,
+            'status'       => 'pending',
         ]);
 
         return response()->json([
-            'message'=>'Booking berhasil',
-
-            'data'=>$booking
+            'success' => true,
+            'message' => 'Booking berhasil dibuat',
+            'data'    => $booking
         ], 201);
     }
 
-    // history user
-    public function history(Request $request){
-        $booking = Booking::where(
-            'user_id',
-            $request->user()->id()
-        )
-        ->latest()
-        ->get();
-
-        return response()->json([
-            'data'=>$booking
-        ]);
-    }
-
-    // detail booking
-    public function show(Request $request, $id){
-        $booking = Booking::where(
-            'user_id',
-            $request->user()->id()
-        )->findOrFail($id);
-
-        return response()->json([
-            'data'=>$booking
-        ]);
-    }
-
-    // admin melihat semua booking
-    public function index(){
-        return response()->json([
-            'data'=>Booking::with('user')
+    // Riwayat (History) booking milik user yang sedang login
+    public function history(Request $request)
+    {
+        $bookings = Booking::where('user_id', $request->user()->id) // FIX
             ->latest()
-            ->get()
-        ]);
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Riwayat booking berhasil diambil',
+            'data'    => $bookings
+        ], 200);
     }
 
+    // Detail satu booking milik user yang sedang login
+    public function show(Request $request, $id)
+    {
+        $booking = Booking::where('user_id', $request->user()->id)->find($id); // FIX
+
+        if (!$booking) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Data booking tidak ditemukan atau bukan milik Anda'
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Detail booking berhasil diambil',
+            'data'    => $booking
+        ], 200);
+    }
+
+    // Admin melihat semua booking dari panel dashboard web (jika diperlukan via API)
+    public function index()
+    {
+        $bookings = Booking::with('user')->latest()->get();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Semua data booking berhasil diambil',
+            'data'    => $bookings
+        ], 200);
+    }
 }

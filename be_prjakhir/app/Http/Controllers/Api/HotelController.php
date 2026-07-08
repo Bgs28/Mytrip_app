@@ -8,15 +8,42 @@ use Illuminate\Http\Request;
 
 class HotelController extends Controller
 {
-    public function index(){
+    // Mengambil semua data hotel (bisa difilter berdasarkan nama atau lokasi)
+    public function index(Request $request)
+    {
+        $query = Hotel::query();
+
+        // Filter berdasarkan nama atau lokasi hotel
+        if ($request->has('search') && $request->search != '') {
+            $query->where('hotel_name', 'LIKE', '%' . $request->search . '%')
+                  ->orWhere('location', 'LIKE', '%' . $request->search . '%');
+        }
+
+        $hotels = $query->latest()->get();
+
         return response()->json([
-            'data'=> Hotel::all()
-        ]);
+            'success' => true,
+            'message' => 'Daftar hotel berhasil dimuat',
+            'data'    => $hotels
+        ], 200);
     }
 
-    public function show($id){
+    // Mengambil detail satu hotel
+    public function show($id)
+    {
+        $hotel = Hotel::find($id);
+
+        if (!$hotel) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Data hotel tidak ditemukan'
+            ], 404);
+        }
+
         return response()->json([
-            'data'=>Hotel::findOrFail($id)
-        ]);
+            'success' => true,
+            'message' => 'Detail hotel berhasil ditemukan',
+            'data'    => $hotel
+        ], 200);
     }
 }

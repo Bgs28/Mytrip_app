@@ -2,92 +2,54 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\FlightController;
-use App\Http\Controllers\Api\HotelController;
-use App\Http\Controllers\Api\TrainController;
-use App\Http\Controllers\Api\BusController;
-use App\Http\Controllers\Api\BookingController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\BusController;
+use App\Http\Controllers\Api\TrainController;
+use App\Http\Controllers\Api\HotelController;
+use App\Http\Controllers\Api\BookingController;
 
-use App\Http\Controllers\UserController;
-use App\Models\Booking;
+/*
+|--------------------------------------------------------------------------
+| API Routes - Proyek MyTrip
+|--------------------------------------------------------------------------
+*/
 
-// AUTH
-Route::post('/register',[AuthController::class,'register']);
-Route::post('/login', [AuthController::class, 'login']);
+// ==========================================
+// 1. AKSES SEBELUM LOGIN (Publik)
+// ==========================================
+// User hanya bisa melihat daftar list utama & mencari tiket di halaman Home
+Route::post('/register', [AuthController::class, 'register']);
+Route::post('/login', [AuthController::class, 'login'])->name('login'); 
 
-// DATA TRAVEL
-
-Route::get('/flights',
-[
-    FlightController::class,
-    'index'
-]);
-
-
-Route::get('/hotels',
-[
-    HotelController::class,
-    'index'
-]);
-
-
-Route::get('/trains',
-[
-    TrainController::class,
-    'index'
-]);
+Route::get('/buses', [BusController::class, 'index']);      // List Bus + Cari
+Route::get('/trains', [TrainController::class, 'index']);    // List Kereta + Cari
+Route::get('/hotels', [HotelController::class, 'index']);    // List Hotel + Cari
 
 
-Route::get('/buses',
-[
-    BusController::class,
-    'index'
-]);
+// ==========================================
+// 2. AKSES SETELAH LOGIN (Wajib Token Sanctum)
+// ==========================================
+// Ketika user klik salah satu tiket untuk melihat detail atau masuk ke profil/riwayat,
+// Flutter harus mengarahkan ke halaman Login/Register terlebih dahulu.
+Route::middleware('auth:sanctum')->group(function () {
 
+    // A. Detail Tiket (Sesuai Alur Baru: Wajib Login untuk melihat harga detail & deskripsi)
+    Route::get('/buses/{id}', [BusController::class, 'show']);  
+    Route::get('/trains/{id}', [TrainController::class, 'show']);
+    Route::get('/hotels/{id}', [HotelController::class, 'show']);
 
-// USER PROFILE (butuh token)
-
-Route::middleware('auth:sanctum')
-->group(function(){
-
-
-    Route::get('/user', function(
-        Request $request
-    ){
-        return $request->user();
+    // B. Halaman Profil User
+    Route::get('/user', function (Request $request) {
+        return response()->json([
+            'success' => true,
+            'message' => 'Data profil user berhasil diambil',
+            'data'    => $request->user()
+        ]);
     });
 
-
-});
-
-Route::middleware('auth:sanctum')
-->group(function(){
-
-    // buat booking
-    Route::post(
-        '/bookings',
-        [
-            BookingController::class,
-            'store'
-        ]
-    );
-
-    // history user
-    Route::get(
-        '/history',
-        [
-            BookingController::class,
-            'history'
-        ]
-    );
-
-    // detail booking
-    Route::get(
-        '/booking/{id}',
-        [
-            BookingController::class,
-            'show'
-        ]
-    );
+    // C. Transaksi Booking & Metode Pembayaran
+    Route::post('/bookings', [BookingController::class, 'store']);       // Mengirim data pemesanan
+    Route::get('/bookings/history', [BookingController::class, 'history']); // Halaman Riwayat Pemesanan
+    Route::get('/bookings/{id}', [BookingController::class, 'show']);    // Detail Riwayat Pemesanan
+    
 });

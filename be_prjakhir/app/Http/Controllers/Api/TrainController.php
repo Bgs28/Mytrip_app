@@ -8,17 +8,44 @@ use Illuminate\Http\Request;
 
 class TrainController extends Controller
 {
-    public function index(){
+    // Mengambil semua data kereta (bisa difilter dari Flutter)
+    public function index(Request $request)
+    {
+        $query = Train::query();
+
+        if ($request->has('from') && $request->from != '') {
+            $query->where('from', 'LIKE', '%' . $request->from . '%');
+        }
+
+        if ($request->has('destination') && $request->destination != '') {
+            $query->where('destination', 'LIKE', '%' . $request->destination . '%');
+        }
+
+        $trains = $query->latest()->get();
+
         return response()->json([
-            'data'=>Train::all()
-        ]);
+            'success' => true,
+            'message' => 'Daftar tiket kereta berhasil dimuat',
+            'data'    => $trains
+        ], 200);
     }
 
+    // Mengambil detail satu kereta
     public function show($id)
     {
-        return response()->json([
-            'data'=>Train::findOrFail($id)
-        ]);
-    }
+        $train = Train::find($id);
 
+        if (!$train) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Data tiket kereta tidak ditemukan'
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Detail tiket kereta berhasil ditemukan',
+            'data'    => $train
+        ], 200);
+    }
 }
