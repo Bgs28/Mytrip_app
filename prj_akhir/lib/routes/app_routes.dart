@@ -1,35 +1,24 @@
 import 'package:flutter/material.dart';
-import 'package:prj_akhir/pages/main/main_page.dart';
-// import booking pages
-import '../pages/booking/booking_pesawat_page.dart';
-import '../pages/booking/booking_kereta_page.dart';
-import '../pages/booking/booking_bus_page.dart';
-import '../pages/booking/booking_hotel_page.dart';
-import '../pages/history/history_page.dart';
-import '../pages/profile/profile_page.dart';
-import '../pages/splash/splash_page.dart';
-import '../pages/login/login_page.dart';
+import '../screens/main_navigator.dart';
+import '../screens/login_page.dart';
+import '../screens/register_page.dart';
 
 class AppRoutes {
-  static Map<String, WidgetBuilder> routes = {
-    // splash page
-    '/': (context) => const SplashPage(),
-    // home page
-    '/main': (context) => const MainPage(),
+  // 1. Definisikan Nama-Nama Rute sebagai Konstanta (Mencegah Typo)
+  static const String mainNavigator = '/main';
+  static const String login = '/login';
+  static const String register = '/register';
 
-    // booking page
-    '/booking_pesawat': (context) => const BookingPesawatPage(),
-    '/booking_bus': (context) => const BookingBusPage(),
-    '/booking_kereta': (context) => const BookingKeretaPage(),
-    '/booking_hotel': (context) => const BookingHotelPage(),
+  // 2. Definisikan Halaman Awal Aplikasi
+  static const String initialRoute = mainNavigator;
 
-    // history page
-    '/history': (context) => const HistoryPage(),
+  // 3. Kumpulan Pemetaan Rute Global
+  static Map<String, WidgetBuilder> get routes {
+    return {
+      mainNavigator: (context) => const MainNavigator(),
 
-    // profile page
-    '/profile': (context) => const ProfilePage(),
-
-    // login page
-    '/login': (context) => const LoginPage(),
-  };
+      login: (context) => const LoginPage(),
+      register: (context) => const RegisterPage(),
+    };
+  }
 }
