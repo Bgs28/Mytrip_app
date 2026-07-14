@@ -1,133 +1,258 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+// lib/services/api_service.dart
+import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../models/bus_model.dart';
-import '../models/train_model.dart';
-import '../models/hotel_model.dart';
-import '../models/user_model.dart';
+import '../utils/constants.dart';
+import '../models/api_response.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://127.0.0.1:8000/api';
+  static final ApiService _instance = ApiService._internal();
+  factory ApiService() => _instance;
+  ApiService._internal();
 
-  // Helper untuk mengambil token yang tersimpan di HP
-  Future<String?> _getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('token');
-  }
+  late Dio _dio;
+  String? _token;
 
-  // OPSI AMBIL LIST (Akses Publik - Tanpa Token)
+  Dio get dio => _dio;
 
-  Future<List<BusModel>> getBuses() async {
-    try {
-      final response = await http.get(Uri.parse('$baseUrl/buses'));
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> responseData = jsonDecode(response.body);
-        final List<dynamic> list = responseData['data'];
-        return list.map((e) => BusModel.fromJson(e)).toList();
-      }
-      throw Exception('Gagal memuat data bus');
-    } catch (e) {
-      throw Exception('Error Bus: $e');
-    }
-  }
-
-  Future<List<TrainModel>> getTrains() async {
-    try {
-      final response = await http.get(Uri.parse('$baseUrl/trains'));
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> responseData = jsonDecode(response.body);
-        final List<dynamic> list = responseData['data'];
-        return list.map((e) => TrainModel.fromJson(e)).toList();
-      }
-      throw Exception('Gagal memuat data kereta');
-    } catch (e) {
-      throw Exception('Error Kereta: $e');
-    }
-  }
-
-  Future<List<HotelModel>> getHotels() async {
-    try {
-      final response = await http.get(Uri.parse('$baseUrl/hotels'));
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> responseData = jsonDecode(response.body);
-        final List<dynamic> list = responseData['data'];
-        return list.map((e) => HotelModel.fromJson(e)).toList();
-      }
-      throw Exception('Gagal memuat data hotel');
-    } catch (e) {
-      throw Exception('Error Hotel: $e');
-    }
-  }
-
-  // OPSI DETAIL (Sesuai Alur Baru: Wajib Bawa Token)
-
-  Future<BusModel> getDetailBus(int id) async {
-    final token = await _getToken();
-    final response = await http.get(
-      Uri.parse('$baseUrl/buses/$id'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+  Future<void> init() async {
+    _dio = Dio(
+      BaseOptions(
+        baseUrl: AppConstants.baseUrl,
+        connectTimeout: const Duration(seconds: 30),
+        receiveTimeout: const Duration(seconds: 30),
+        sendTimeout: const Duration(seconds: 30),
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      ),
     );
 
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> responseData = jsonDecode(response.body);
-      return BusModel.fromJson(responseData['data']);
-    } else {
-      throw Exception(
-        jsonDecode(response.body)['message'] ?? 'Gagal memuat detail',
+    // Load token dari shared preferences
+    await _loadToken();
+
+    // Interceptor untuk menambahkan token
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          if (_token != null) {
+            options.headers['Authorization'] = 'Bearer $_token';
+          }
+          debugPrint('🚀 Request: ${options.method} ${options.path}');
+          debugPrint('📦 Headers: ${options.headers}');
+          debugPrint('📦 Data: ${options.data}');
+          return handler.next(options);
+        },
+        onResponse: (response, handler) {
+          debugPrint('✅ Response: ${response.statusCode} ${response.data}');
+          return handler.next(response);
+        },
+        onError: (error, handler) {
+          debugPrint('❌ Error: ${error.message}');
+          debugPrint('❌ Response: ${error.response?.data}');
+          return handler.next(error);
+        },
+      ),
+    );
+  }
+
+  Future<void> _loadToken() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _token = prefs.getString(AppConstants.tokenKey);
+    } catch (e) {
+      debugPrint('Error loading token: $e');
+    }
+  }
+
+  Future<void> setToken(String token) async {
+    _token = token;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(AppConstants.tokenKey, token);
+    } catch (e) {
+      debugPrint('Error saving token: $e');
+    }
+  }
+
+  Future<void> clearToken() async {
+    _token = null;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(AppConstants.tokenKey);
+    } catch (e) {
+      debugPrint('Error clearing token: $e');
+    }
+  }
+
+  // Generic GET request
+  Future<ApiResponse<T>> get<T>(
+    String endpoint, {
+    Map<String, dynamic>? queryParameters,
+    T Function(dynamic)? fromJsonT,
+  }) async {
+    try {
+      final response = await _dio.get(
+        endpoint,
+        queryParameters: queryParameters,
       );
-    }
-  }
 
-  // AUTHENTICATION & PROFIL
-
-  Future<bool> login(String email, String password) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/login'),
-        body: {'email': email, 'password': password},
-      );
-
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> responseData = jsonDecode(response.body);
-        String token = responseData['token'];
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('token', token);
-        return true;
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = response.data;
+        if (fromJsonT != null) {
+          return ApiResponse<T>(
+            success: data['success'] ?? true,
+            message: data['message'] ?? 'Success',
+            data: fromJsonT(data),
+          );
+        }
+        return ApiResponse<T>(
+          success: data['success'] ?? true,
+          message: data['message'] ?? 'Success',
+          data: data['data'] as T?,
+        );
       }
-      return false;
+
+      return ApiResponse<T>.error(
+        'Failed to fetch data',
+        statusCode: response.statusCode,
+      );
+    } on DioException catch (e) {
+      return _handleError<T>(e);
     } catch (e) {
-      return false;
+      return ApiResponse<T>.error('Unexpected error: $e');
     }
   }
 
-  Future<UserModel?> getProfile() async {
-    final token = await _getToken();
-    final response = await http.get(
-      Uri.parse('$baseUrl/user'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
-    );
+  // Generic POST request
+  Future<ApiResponse<T>> post<T>(
+    String endpoint, {
+    dynamic data,
+    T Function(dynamic)? fromJsonT,
+  }) async {
+    try {
+      final response = await _dio.post(endpoint, data: data);
 
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> responseData = jsonDecode(response.body);
-      return UserModel.fromJson(responseData['data']);
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final responseData = response.data;
+        if (fromJsonT != null) {
+          return ApiResponse<T>(
+            success: responseData['success'] ?? true,
+            message: responseData['message'] ?? 'Success',
+            data: fromJsonT(responseData),
+          );
+        }
+        return ApiResponse<T>(
+          success: responseData['success'] ?? true,
+          message: responseData['message'] ?? 'Success',
+          data: responseData['data'] as T?,
+        );
+      }
+
+      return ApiResponse<T>.error(
+        'Failed to post data',
+        statusCode: response.statusCode,
+      );
+    } on DioException catch (e) {
+      return _handleError<T>(e);
+    } catch (e) {
+      return ApiResponse<T>.error('Unexpected error: $e');
     }
-    return null;
   }
 
-  // TRANSAKSI BOOKING (Kirim Data ke Laravel)
+  // Generic PUT/PATCH request
+  Future<ApiResponse<T>> put<T>(
+    String endpoint, {
+    dynamic data,
+    T Function(dynamic)? fromJsonT,
+  }) async {
+    try {
+      final response = await _dio.put(endpoint, data: data);
 
-  Future<bool> createBooking(String type, int itemId, int totalPrice) async {
-    final token = await _getToken();
-    final response = await http.post(
-      Uri.parse('$baseUrl/bookings'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
-      body: {
-        'type': type,
-        'item_id': itemId.toString(),
-        'total_price': totalPrice.toString(),
-      },
-    );
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final responseData = response.data;
+        if (fromJsonT != null) {
+          return ApiResponse<T>(
+            success: responseData['success'] ?? true,
+            message: responseData['message'] ?? 'Success',
+            data: fromJsonT(responseData),
+          );
+        }
+        return ApiResponse<T>(
+          success: responseData['success'] ?? true,
+          message: responseData['message'] ?? 'Success',
+          data: responseData['data'] as T?,
+        );
+      }
 
-    return response.statusCode == 200 || response.statusCode == 201;
+      return ApiResponse<T>.error(
+        'Failed to update data',
+        statusCode: response.statusCode,
+      );
+    } on DioException catch (e) {
+      return _handleError<T>(e);
+    } catch (e) {
+      return ApiResponse<T>.error('Unexpected error: $e');
+    }
+  }
+
+  // Generic DELETE request
+  Future<ApiResponse<T>> delete<T>(
+    String endpoint, {
+    T Function(dynamic)? fromJsonT,
+  }) async {
+    try {
+      final response = await _dio.delete(endpoint);
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        final responseData = response.data;
+        if (fromJsonT != null && responseData != null) {
+          return ApiResponse<T>(
+            success: responseData['success'] ?? true,
+            message: responseData['message'] ?? 'Success',
+            data: fromJsonT(responseData),
+          );
+        }
+        return ApiResponse<T>(
+          success: true,
+          message: 'Data deleted successfully',
+        );
+      }
+
+      return ApiResponse<T>.error(
+        'Failed to delete data',
+        statusCode: response.statusCode,
+      );
+    } on DioException catch (e) {
+      return _handleError<T>(e);
+    } catch (e) {
+      return ApiResponse<T>.error('Unexpected error: $e');
+    }
+  }
+
+  // Error handler
+  ApiResponse<T> _handleError<T>(DioException e) {
+    String message = 'Terjadi kesalahan pada server';
+
+    if (e.response != null) {
+      final data = e.response?.data;
+      if (data is Map && data.containsKey('message')) {
+        message = data['message'];
+      } else if (data is Map && data.containsKey('error')) {
+        message = data['error'];
+      } else {
+        message = 'Server error: ${e.response?.statusCode}';
+      }
+    } else if (e.type == DioExceptionType.connectionTimeout ||
+        e.type == DioExceptionType.receiveTimeout) {
+      message = 'Koneksi timeout. Periksa koneksi internet Anda';
+    } else if (e.type == DioExceptionType.connectionError) {
+      message = 'Tidak dapat terhubung ke server';
+    } else if (e.type == DioExceptionType.unknown) {
+      message = 'Terjadi kesalahan jaringan';
+    }
+
+    return ApiResponse<T>.error(message, statusCode: e.response?.statusCode);
   }
 }
