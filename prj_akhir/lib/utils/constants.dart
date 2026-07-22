@@ -2,8 +2,8 @@
 class AppConstants {
   // API Configuration
   static const String baseUrl =
-      // 'http://192.168.1.100:8000/api'; // jika menggunakan emulator Android, gunakan IP
-      'http://127.0.0.1:8000/api'; // localhost
+      'http://192.168.98.112:8000/api'; // jika menggunakan emulator Android, gunakan IP
+  // 'http://127.0.0.1:8000/api'; // localhost
   static const String apiVersion = 'v1';
 
   // API Endpoints

@@ -15,6 +15,7 @@ import '../../widgets/loading_widget.dart';
 import '../../widgets/error_widget.dart';
 import '../../widgets/status_badge.dart';
 import '../../widgets/custom_button.dart';
+import '../payments/payment_upload_screen.dart'; // Import Payment Upload Screen
 
 class BookingDetailScreen extends StatefulWidget {
   final int bookingId;
@@ -26,6 +27,8 @@ class BookingDetailScreen extends StatefulWidget {
 }
 
 class _BookingDetailScreenState extends State<BookingDetailScreen> {
+  bool _isLoading = false;
+
   @override
   void initState() {
     super.initState();
@@ -33,8 +36,18 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
   }
 
   Future<void> _loadData() async {
+    setState(() {
+      _isLoading = true;
+    });
+
     final provider = Provider.of<BookingProvider>(context, listen: false);
     await provider.loadBookingDetail(widget.bookingId);
+
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -45,10 +58,14 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
         title: const Text('Detail Booking'),
         backgroundColor: AppTheme.white,
         elevation: 0,
+        leading: IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.arrow_back_ios),
+        ),
       ),
       body: Consumer<BookingProvider>(
         builder: (context, provider, child) {
-          if (provider.isLoading) {
+          if (provider.isLoading || _isLoading) {
             return const LoadingWidget();
           }
 
@@ -74,7 +91,8 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                 const SizedBox(height: 16),
                 _buildPaymentInfo(booking),
                 const SizedBox(height: 24),
-                _buildActionButtons(booking),
+                _buildActionButtons(context, booking),
+                const SizedBox(height: 16),
               ],
             ),
           );
@@ -93,37 +111,29 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
           gradient: AppTheme.primaryGradient,
           borderRadius: BorderRadius.circular(16),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        booking.bookingCode,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${booking.typeLabel} • ${AppHelpers.formatDate(booking.createdAt)}',
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    booking.bookingCode,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
-                ),
-                StatusBadge(status: booking.status),
-              ],
+                  const SizedBox(height: 4),
+                  Text(
+                    '${booking.typeLabel} • ${AppHelpers.formatDate(booking.createdAt)}',
+                    style: const TextStyle(color: Colors.white70, fontSize: 13),
+                  ),
+                ],
+              ),
             ),
+            StatusBadge(status: booking.status),
           ],
         ),
       ),
@@ -192,13 +202,25 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
               future: _getItemDetail(booking),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const LoadingWidget();
+                  return const Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: Center(
+                      child: SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                  );
                 }
 
                 if (snapshot.hasError || snapshot.data == null) {
-                  return Text(
-                    'Data tidak tersedia',
-                    style: AppTheme.bodyMedium.copyWith(color: AppTheme.grey),
+                  return Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Text(
+                      'Data tidak tersedia',
+                      style: AppTheme.bodyMedium.copyWith(color: AppTheme.grey),
+                    ),
                   );
                 }
 
@@ -294,6 +316,12 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
   }
 
   Widget _buildPaymentInfo(Booking booking) {
+    // Cek apakah booking memiliki diskon
+    final hasDiscount = booking.discountAmount > 0;
+    final totalPrice = booking.totalPrice;
+    final discountAmount = booking.discountAmount;
+    final finalPrice = totalPrice - discountAmount;
+
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -304,12 +332,27 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
           children: [
             const Text('💳 Informasi Pembayaran', style: AppTheme.heading4),
             const SizedBox(height: 12),
+            if (hasDiscount) ...[
+              _buildInfoRow(
+                'Harga Asli',
+                AppHelpers.formatCurrency(totalPrice.toDouble()),
+              ),
+              _buildInfoRow(
+                'Diskon',
+                '- ${AppHelpers.formatCurrency(discountAmount.toDouble())}',
+              ),
+              const Divider(),
+            ],
             _buildInfoRow(
               'Total Harga',
-              AppHelpers.formatCurrency(booking.totalPrice.toDouble()),
+              AppHelpers.formatCurrency(
+                hasDiscount ? finalPrice.toDouble() : totalPrice.toDouble(),
+              ),
             ),
             _buildInfoRow('Metode Pembayaran', 'Transfer Bank'),
             _buildInfoRow('Status Pembayaran', booking.statusLabel),
+
+            // Status Messages
             if (booking.status.toLowerCase() == 'paid') ...[
               const SizedBox(height: 8),
               Container(
@@ -360,6 +403,31 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                   ],
                 ),
               ),
+            ] else if (booking.status.toLowerCase() == 'cancel') ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.error.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppTheme.error),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.cancel, color: AppTheme.error),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'Booking telah dibatalkan',
+                        style: TextStyle(
+                          color: AppTheme.error,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ],
         ),
@@ -367,17 +435,26 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
     );
   }
 
-  Widget _buildActionButtons(Booking booking) {
-    if (booking.status.toLowerCase() == 'pending') {
+  Widget _buildActionButtons(BuildContext context, Booking booking) {
+    final status = booking.status.toLowerCase();
+
+    // Jika status paid atau cancel, hanya tombol kembali
+    if (status == 'paid' || status == 'cancel') {
+      return CustomButton(
+        text: 'Kembali ke Riwayat',
+        onPressed: () => Navigator.pop(context),
+        isFullWidth: true,
+      );
+    }
+
+    // Jika status pending, tampilkan tombol upload dan cancel
+    if (status == 'pending') {
       return Column(
         children: [
           CustomButton(
-            text: 'Lakukan Pembayaran',
+            text: 'Upload Bukti Pembayaran',
             onPressed: () {
-              AppHelpers.showSnackBar(
-                context,
-                'Fitur pembayaran akan segera hadir',
-              );
+              _navigateToPaymentUpload(context, booking);
             },
             isFullWidth: true,
           ),
@@ -396,12 +473,30 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
       );
     }
 
+    // Default
     return CustomButton(
       text: 'Kembali ke Riwayat',
       onPressed: () => Navigator.pop(context),
       isFullWidth: true,
     );
   }
+
+  void _navigateToPaymentUpload(BuildContext context, Booking booking) {
+    // Navigate ke Payment Upload Screen
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PaymentUploadScreen(
+          paymentId: booking.id, // Sementara menggunakan booking id
+          bookingCode: booking.bookingCode,
+          totalAmount: booking.totalPrice.toDouble(),
+          paymentMethod: 'bank_transfer_bca', // Default
+        ),
+      ),
+    );
+  }
+
+  // lib/views/bookings/booking_detail_screen.dart - Update _showCancelDialog
 
   void _showCancelDialog(Booking booking) {
     showDialog(
@@ -417,9 +512,26 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
             child: const Text('Tidak'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              AppHelpers.showSnackBar(context, 'Booking berhasil dibatalkan');
+
+              final bookingProvider = Provider.of<BookingProvider>(
+                context,
+                listen: false,
+              );
+              final success = await bookingProvider.cancelBooking(booking.id);
+
+              if (success && mounted) {
+                AppHelpers.showSnackBar(context, 'Booking berhasil dibatalkan');
+                // Refresh data
+                await _loadData();
+              } else if (mounted && bookingProvider.error != null) {
+                AppHelpers.showSnackBar(
+                  context,
+                  bookingProvider.error!,
+                  isError: true,
+                );
+              }
             },
             style: TextButton.styleFrom(foregroundColor: AppTheme.error),
             child: const Text('Ya, Batalkan'),

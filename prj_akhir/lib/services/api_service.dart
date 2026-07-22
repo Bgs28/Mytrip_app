@@ -1,4 +1,5 @@
-// lib/services/api_service.dart
+// lib/services/api_service.dart - Tambahkan method patch
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -29,10 +30,8 @@ class ApiService {
       ),
     );
 
-    // Load token dari shared preferences
     await _loadToken();
 
-    // Interceptor untuk menambahkan token
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) {
@@ -132,7 +131,13 @@ class ApiService {
     T Function(dynamic)? fromJsonT,
   }) async {
     try {
+      debugPrint('📤 POST Request: $endpoint');
+      debugPrint('📤 Data: $data');
+
       final response = await _dio.post(endpoint, data: data);
+
+      debugPrint('📥 Response: ${response.statusCode}');
+      debugPrint('📥 Data: ${response.data}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final responseData = response.data;
@@ -155,13 +160,16 @@ class ApiService {
         statusCode: response.statusCode,
       );
     } on DioException catch (e) {
+      debugPrint('❌ Dio Error: ${e.message}');
+      debugPrint('❌ Response: ${e.response?.data}');
       return _handleError<T>(e);
     } catch (e) {
+      debugPrint('❌ Error: $e');
       return ApiResponse<T>.error('Unexpected error: $e');
     }
   }
 
-  // Generic PUT/PATCH request
+  // Generic PUT request
   Future<ApiResponse<T>> put<T>(
     String endpoint, {
     dynamic data,
@@ -193,6 +201,51 @@ class ApiService {
     } on DioException catch (e) {
       return _handleError<T>(e);
     } catch (e) {
+      return ApiResponse<T>.error('Unexpected error: $e');
+    }
+  }
+
+  // Generic PATCH request - TAMBAHKAN METHOD INI
+  Future<ApiResponse<T>> patch<T>(
+    String endpoint, {
+    dynamic data,
+    T Function(dynamic)? fromJsonT,
+  }) async {
+    try {
+      debugPrint('📤 PATCH Request: $endpoint');
+      debugPrint('📤 Data: $data');
+
+      final response = await _dio.patch(endpoint, data: data);
+
+      debugPrint('📥 Response: ${response.statusCode}');
+      debugPrint('📥 Data: ${response.data}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final responseData = response.data;
+        if (fromJsonT != null) {
+          return ApiResponse<T>(
+            success: responseData['success'] ?? true,
+            message: responseData['message'] ?? 'Success',
+            data: fromJsonT(responseData),
+          );
+        }
+        return ApiResponse<T>(
+          success: responseData['success'] ?? true,
+          message: responseData['message'] ?? 'Success',
+          data: responseData['data'] as T?,
+        );
+      }
+
+      return ApiResponse<T>.error(
+        'Failed to patch data',
+        statusCode: response.statusCode,
+      );
+    } on DioException catch (e) {
+      debugPrint('❌ Dio Error: ${e.message}');
+      debugPrint('❌ Response: ${e.response?.data}');
+      return _handleError<T>(e);
+    } catch (e) {
+      debugPrint('❌ Error: $e');
       return ApiResponse<T>.error('Unexpected error: $e');
     }
   }

@@ -23,22 +23,44 @@ class Hotel {
   });
 
   factory Hotel.fromJson(Map<String, dynamic> json) {
+    // Helper function untuk convert ke int dengan aman
+    int parseToInt(dynamic value) {
+      if (value == null) return 0;
+      if (value is int) return value;
+      if (value is double) return value.toInt();
+      if (value is String) {
+        final cleaned = value.replaceAll(RegExp(r'[^0-9]'), '');
+        if (cleaned.isEmpty) return 0;
+        return int.tryParse(cleaned) ?? 0;
+      }
+      return 0;
+    }
+
+    // Helper function untuk convert ke double dengan aman
+    double? parseToDouble(dynamic value) {
+      if (value == null) return null;
+      if (value is double) return value;
+      if (value is int) return value.toDouble();
+      if (value is String) {
+        return double.tryParse(value);
+      }
+      return null;
+    }
+
     return Hotel(
       id: json['id'] ?? 0,
       name: json['name'] ?? '',
       location: json['location'] ?? '',
       description: json['description'],
-      price: json['price'] ?? 0,
-      rating: json['rating'] != null
-          ? double.parse(json['rating'].toString())
-          : null,
+      price: parseToInt(json['price']),
+      rating: parseToDouble(json['rating']),
       image: json['image'],
-      createdAt: DateTime.parse(
-        json['created_at'] ?? DateTime.now().toIso8601String(),
-      ),
-      updatedAt: DateTime.parse(
-        json['updated_at'] ?? DateTime.now().toIso8601String(),
-      ),
+      createdAt: json['created_at'] != null
+          ? DateTime.tryParse(json['created_at']) ?? DateTime.now()
+          : DateTime.now(),
+      updatedAt: json['updated_at'] != null
+          ? DateTime.tryParse(json['updated_at']) ?? DateTime.now()
+          : DateTime.now(),
     );
   }
 

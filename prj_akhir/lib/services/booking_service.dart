@@ -87,4 +87,28 @@ class BookingService {
       return ApiResponse<Booking>.error('Terjadi kesalahan: $e');
     }
   }
+
+  Future<ApiResponse<Booking>> cancelBooking(int id) async {
+    try {
+      final response = await _apiService.patch(
+        '${AppConstants.baseUrl}${AppConstants.bookingsEndpoint}/$id/cancel',
+      );
+
+      if (response.success && response.data != null) {
+        final booking = Booking.fromJson(response.data as Map<String, dynamic>);
+        return ApiResponse<Booking>(
+          success: true,
+          message: response.message,
+          data: booking,
+        );
+      }
+
+      return ApiResponse<Booking>.error(
+        response.message,
+        statusCode: response.statusCode,
+      );
+    } catch (e) {
+      return ApiResponse<Booking>.error('Terjadi kesalahan: $e');
+    }
+  }
 }

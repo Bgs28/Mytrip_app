@@ -8,11 +8,11 @@ class Booking {
   final int itemId;
   final String bookingCode;
   final int totalPrice;
-  final String
-  status; // 'pending', 'paid', 'cancel' - Pastikan ini tidak nullable
+  final int discountAmount;
+  final String status; // 'pending', 'paid', 'cancel'
   final DateTime createdAt;
   final DateTime updatedAt;
-  final User? user; // Relasi user (optional)
+  final User? user;
 
   Booking({
     required this.id,
@@ -21,27 +21,43 @@ class Booking {
     required this.itemId,
     required this.bookingCode,
     required this.totalPrice,
-    required this.status, // Required, tidak nullable
+    this.discountAmount = 0,
+    required this.status,
     required this.createdAt,
     required this.updatedAt,
     this.user,
   });
 
   factory Booking.fromJson(Map<String, dynamic> json) {
+    // Helper function untuk convert ke int dengan aman
+    int parseToInt(dynamic value) {
+      if (value == null) return 0;
+      if (value is int) return value;
+      if (value is double) return value.toInt();
+      if (value is String) {
+        // Hapus titik, koma, dan karakter non-digit
+        final cleaned = value.replaceAll(RegExp(r'[^0-9]'), '');
+        if (cleaned.isEmpty) return 0;
+        return int.tryParse(cleaned) ?? 0;
+      }
+      return 0;
+    }
+
     return Booking(
       id: json['id'] ?? 0,
       userId: json['user_id'] ?? 0,
       type: json['type'] ?? '',
       itemId: json['item_id'] ?? 0,
       bookingCode: json['booking_code'] ?? '',
-      totalPrice: json['total_price'] ?? 0,
-      status: json['status'] ?? 'pending', // Default value jika null
-      createdAt: DateTime.parse(
-        json['created_at'] ?? DateTime.now().toIso8601String(),
-      ),
-      updatedAt: DateTime.parse(
-        json['updated_at'] ?? DateTime.now().toIso8601String(),
-      ),
+      totalPrice: parseToInt(json['total_price']),
+      discountAmount: parseToInt(json['discount_amount']),
+      status: json['status'] ?? 'pending',
+      createdAt: json['created_at'] != null
+          ? DateTime.tryParse(json['created_at']) ?? DateTime.now()
+          : DateTime.now(),
+      updatedAt: json['updated_at'] != null
+          ? DateTime.tryParse(json['updated_at']) ?? DateTime.now()
+          : DateTime.now(),
       user: json['user'] != null ? User.fromJson(json['user']) : null,
     );
   }
@@ -54,6 +70,7 @@ class Booking {
       'item_id': itemId,
       'booking_code': bookingCode,
       'total_price': totalPrice,
+      'discount_amount': discountAmount,
       'status': status,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
@@ -107,13 +124,13 @@ class Booking {
   String get statusColor {
     switch (status.toLowerCase()) {
       case 'pending':
-        return '#FBBC04'; // Yellow
+        return '#FBBC04';
       case 'paid':
-        return '#34A853'; // Green
+        return '#34A853';
       case 'cancel':
-        return '#EA4335'; // Red
+        return '#EA4335';
       default:
-        return '#80868B'; // Grey
+        return '#80868B';
     }
   }
 }
