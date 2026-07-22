@@ -7,6 +7,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\Admin\HotelController;
 use App\Http\Controllers\Admin\TrainController;
 use App\Http\Controllers\Admin\BusController;
+use App\Http\Controllers\Admin\BookingController as AdminBookingController;
 
 // Web Routes - Admin Panel
 
@@ -36,6 +37,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
         
         // CRUD kelola Bus
         Route::resource('buses', BusController::class);
+
+        // Route Kelola Booking Admin
+    Route::get('/bookings', [AdminBookingController::class, 'index'])->name('booking.index');
+    Route::patch('/bookings/{id}/status', [AdminBookingController::class, 'updateStatus'])->name('booking.updateStatus');
 
         // Logout Admin
         Route::post('/logout', [AuthController::class, 'logout'])->name('logout');

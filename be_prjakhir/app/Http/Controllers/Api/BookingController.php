@@ -78,4 +78,43 @@ class BookingController extends Controller
             'data'    => $bookings
         ], 200);
     }
+
+    //cancel booking
+     public function cancel(Request $request, $id)
+    {
+        $booking = Booking::where('user_id', $request->user()->id)->find($id);
+
+        if (!$booking) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Booking tidak ditemukan'
+            ], 404);
+        }
+
+        // Cek apakah booking bisa dibatalkan (hanya yang status pending)
+        if ($booking->status !== 'pending') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Booking dengan status ' . $booking->status . ' tidak dapat dibatalkan'
+            ], 400);
+        }
+
+        // Update status menjadi cancel
+        $booking->update([
+            'status' => 'cancel'
+        ]);
+
+        // Jika ada payment yang terkait, update juga
+        if ($booking->payment) {
+            $booking->payment->update([
+                'status' => 'refunded'
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Booking berhasil dibatalkan',
+            'data' => $booking
+        ], 200);
+    }
 }

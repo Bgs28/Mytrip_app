@@ -7,6 +7,8 @@ use App\Http\Controllers\Api\BusController;
 use App\Http\Controllers\Api\TrainController;
 use App\Http\Controllers\Api\HotelController;
 use App\Http\Controllers\Api\BookingController;
+use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\Api\PromoController;
 
 /*
 |--------------------------------------------------------------------------
@@ -25,6 +27,7 @@ Route::get('/buses', [BusController::class, 'index']);      // List Bus + Cari
 Route::get('/trains', [TrainController::class, 'index']);    // List Kereta + Cari
 Route::get('/hotels', [HotelController::class, 'index']);    // List Hotel + Cari
 
+Route::get('/promos', [PromoController::class, 'index']);
 
 // ==========================================
 // 2. AKSES SETELAH LOGIN (Wajib Token Sanctum)
@@ -51,5 +54,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/bookings', [BookingController::class, 'store']);       // Mengirim data pemesanan
     Route::get('/bookings/history', [BookingController::class, 'history']); // Halaman Riwayat Pemesanan
     Route::get('/bookings/{id}', [BookingController::class, 'show']);    // Detail Riwayat Pemesanan
+    Route::patch('/bookings/{id}/cancel', [BookingController::class, 'cancel']); // Batalkan Pemesanan
     
+     // Promo
+    Route::post('/promos/validate', [PromoController::class, 'validatePromo']);
+    
+    // Payment
+    Route::post('/payments', [PaymentController::class, 'store']);
+    Route::post('/payments/{id}/upload-proof', [PaymentController::class, 'uploadProof']);
+    Route::get('/payments/{id}', [PaymentController::class, 'show']);
+    Route::get('/payments/history', [PaymentController::class, 'history']);
 });
