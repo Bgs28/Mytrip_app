@@ -37,6 +37,20 @@ class Payment extends Model
         return $this->belongsTo(Promo::class);
     }
 
+    // Accessor untuk payment method label
+    public function getPaymentMethodLabelAttribute()
+    {
+        $methods = [
+            'bank_transfer_bca' => 'Bank Transfer BCA',
+            'bank_transfer_mandiri' => 'Bank Transfer Mandiri',
+            'bank_transfer_bni' => 'Bank Transfer BNI',
+            'ovo' => 'OVO',
+            'gopay' => 'GoPay',
+        ];
+        
+        return $methods[$this->payment_method] ?? $this->payment_method;
+    }
+
     // Generate invoice number
     public static function generateInvoiceNumber()
     {

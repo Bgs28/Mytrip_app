@@ -7,7 +7,8 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\Admin\HotelController;
 use App\Http\Controllers\Admin\TrainController;
 use App\Http\Controllers\Admin\BusController;
-use App\Http\Controllers\Admin\BookingController as AdminBookingController;
+use App\Http\Controllers\Admin\BookingController;
+use App\Http\Controllers\Admin\PromoController;
 
 // Web Routes - Admin Panel
 
@@ -29,6 +30,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // CRUD Kelola User
         Route::resource('users', UserController::class);
 
+        // CRUD Kelola Promo
+        Route::resource('promo', PromoController::class);
+        Route::post('/promo/{id}/toggle-active', [PromoController::class, 'toggleActive'])
+            ->name('promo.toggleActive');
+
         // CRUD Kelola Hotel
         Route::resource('hotels', HotelController::class);
 
@@ -39,8 +45,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::resource('buses', BusController::class);
 
         // Route Kelola Booking Admin
-    Route::get('/bookings', [AdminBookingController::class, 'index'])->name('booking.index');
-    Route::patch('/bookings/{id}/status', [AdminBookingController::class, 'updateStatus'])->name('booking.updateStatus');
+        Route::get('/bookings', [BookingController::class, 'index'])->name('booking.index');
+        Route::get('/bookings/{id}', [BookingController::class, 'show'])->name('booking.show');
+        Route::patch('/bookings/{id}/status', [BookingController::class, 'updateStatus'])->name('booking.updateStatus');
+
+        // Route Approve/Reject Payment
+        Route::post('/bookings/{id}/approve-payment', [BookingController::class, 'approvePayment'])->name('booking.approvePayment');
+        Route::post('/bookings/{id}/reject-payment', [BookingController::class, 'rejectPayment'])->name('booking.rejectPayment');
 
         // Logout Admin
         Route::post('/logout', [AuthController::class, 'logout'])->name('logout');

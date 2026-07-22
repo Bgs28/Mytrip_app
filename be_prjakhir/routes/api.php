@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\HotelController;
 use App\Http\Controllers\Api\BookingController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\PromoController;
+use App\Http\Controllers\Api\ETicketController;
 
 /*
 |--------------------------------------------------------------------------
@@ -58,10 +59,17 @@ Route::middleware('auth:sanctum')->group(function () {
     
      // Promo
     Route::post('/promos/validate', [PromoController::class, 'validatePromo']);
-    
+    Route::resource('promos', PromoController::class);
+    Route::post('/promos/{id}/toggle-active', [PromoController::class, 'toggleActive'])
+        ->name('promos.toggleActive');
+
     // Payment
     Route::post('/payments', [PaymentController::class, 'store']);
     Route::post('/payments/{id}/upload-proof', [PaymentController::class, 'uploadProof']);
     Route::get('/payments/{id}', [PaymentController::class, 'show']);
     Route::get('/payments/history', [PaymentController::class, 'history']);
+
+    // E-Ticket
+    Route::get('/e-tickets/{booking_id}', [ETicketController::class, 'show']);
+    Route::post('/e-tickets/check-in', [ETicketController::class, 'checkIn']);
 });

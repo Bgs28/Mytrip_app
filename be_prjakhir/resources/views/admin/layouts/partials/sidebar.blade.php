@@ -21,5 +21,8 @@
         <a href="{{ route('admin.booking.index') }}" class="flex items-center px-4 py-3 rounded-xl font-medium transition-all {{ request()->routeIs('admin.hotels.*') ? 'bg-blue-800 text-white' : 'text-blue-200 hover:bg-blue-800 hover:text-white' }}">
             <span>Data Booking</span>
         </a>
+        <a href="{{ route('admin.promo.index') }}" class="flex items-center px-4 py-3 rounded-xl font-medium transition-all {{ request()->routeIs('admin.hotels.*') ? 'bg-blue-800 text-white' : 'text-blue-200 hover:bg-blue-800 hover:text-white' }}">
+            <span>Data Promo</span>
+        </a>
     </nav>
 </aside>

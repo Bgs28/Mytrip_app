@@ -20,4 +20,24 @@ class Booking extends Model
     {
         return $this->belongsTo(User::class);
     }
+    
+    public function payment()
+    {
+        return $this->hasOne(Payment::class);
+    }
+
+    public function eTicket()
+    {
+        return $this->hasOne(ETicket::class);
+    }
+
+    public function promo(){
+        return $this->belongsTo(Promo::class);
+    }
+
+    // Relasi ke Room Booking (untuk hotel)
+    // public function roomBooking()
+    // {
+    //     return $this->hasOne(RoomBooking::class);
+    // }
 }
