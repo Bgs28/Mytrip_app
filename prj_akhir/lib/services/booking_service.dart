@@ -9,18 +9,23 @@ class BookingService {
 
   // Create new booking
   Future<ApiResponse<Booking>> createBooking({
-    required String type, // 'bus', 'train', 'hotel'
+    required String type,
     required int itemId,
     required int totalPrice,
   }) async {
     try {
+      print('📤 API: Creating booking...');
       final response = await _apiService.post(
         '${AppConstants.baseUrl}${AppConstants.bookingsEndpoint}',
         data: {'type': type, 'item_id': itemId, 'total_price': totalPrice},
       );
 
+      print('📥 API Response: ${response.success}');
+      print('📥 API Data: ${response.data}');
+
       if (response.success && response.data != null) {
         final booking = Booking.fromJson(response.data as Map<String, dynamic>);
+        print('✅ API: Booking created with ID: ${booking.id}');
         return ApiResponse<Booking>(
           success: true,
           message: response.message,
@@ -33,6 +38,7 @@ class BookingService {
         statusCode: response.statusCode,
       );
     } catch (e) {
+      print('❌ API Error: $e');
       return ApiResponse<Booking>.error('Terjadi kesalahan: $e');
     }
   }

@@ -2,12 +2,13 @@
 class AppConstants {
   // API Configuration
   static const String baseUrl =
-      'http://192.168.98.112:8000/api'; // jika menggunakan emulator Android, gunakan IP
+      'http://192.168.126.112:8000/api'; // jika menggunakan emulator Android, gunakan IP
   // 'http://127.0.0.1:8000/api'; // localhost
   static const String apiVersion = 'v1';
 
   // API Endpoints
   static const String loginEndpoint = '/login';
+  static const String paymentsEndpoint = '/payments';
   static const String registerEndpoint = '/register';
   static const String logoutEndpoint = '/logout';
   static const String userEndpoint = '/user';

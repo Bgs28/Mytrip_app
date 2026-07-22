@@ -9,6 +9,7 @@ import '../../utils/helpers.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_textfield.dart';
 import '../../widgets/loading_widget.dart';
+import '../../services/payment_service.dart';
 
 class PaymentUploadScreen extends StatefulWidget {
   final int paymentId;
@@ -448,28 +449,40 @@ class _PaymentUploadScreenState extends State<PaymentUploadScreen> {
       _errorMessage = null;
     });
 
-    final bookingProvider = Provider.of<BookingProvider>(
-      context,
-      listen: false,
-    );
+    try {
+      // Gunakan PaymentService langsung untuk upload
+      final paymentService = PaymentService();
+      final response = await paymentService.uploadProof(
+        paymentId: widget.paymentId,
+        proofFile: _proofImage!,
+      );
 
-    final success = await bookingProvider.uploadPaymentProof(
-      paymentId: widget.paymentId,
-      proofFile: _proofImage!,
-    );
+      if (!mounted) return;
 
-    if (!mounted) return;
-
-    setState(() {
-      _isUploading = false;
-    });
-
-    if (success) {
-      _showSuccessDialog();
-    } else {
       setState(() {
-        _errorMessage =
-            bookingProvider.error ?? 'Gagal upload bukti pembayaran';
+        _isUploading = false;
+      });
+
+      if (response.success) {
+        // Refresh booking history
+        final bookingProvider = Provider.of<BookingProvider>(
+          context,
+          listen: false,
+        );
+        await bookingProvider.loadBookingHistory(refresh: true);
+
+        // Tampilkan dialog sukses dengan pesan menunggu verifikasi
+        _showSuccessDialog();
+      } else {
+        setState(() {
+          _errorMessage = response.message ?? 'Gagal upload bukti pembayaran';
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isUploading = false;
+        _errorMessage = 'Terjadi kesalahan: $e';
       });
     }
   }
@@ -481,7 +494,7 @@ class _PaymentUploadScreenState extends State<PaymentUploadScreen> {
       builder: (context) => AlertDialog(
         title: const Icon(
           Icons.check_circle,
-          color: AppTheme.success,
+          color: AppTheme.warning,
           size: 64,
         ),
         content: const Column(
@@ -490,8 +503,9 @@ class _PaymentUploadScreenState extends State<PaymentUploadScreen> {
             Text('Bukti Pembayaran Terkirim!', style: AppTheme.heading3),
             SizedBox(height: 8),
             Text(
-              'Terima kasih, pembayaran Anda akan diverifikasi oleh admin.\n\n'
-              'Status pembayaran akan berubah menjadi "Paid" setelah diverifikasi.',
+              'Terima kasih, bukti pembayaran Anda telah terkirim.\n\n'
+              'Status pembayaran akan berubah menjadi "Paid" setelah diverifikasi oleh admin.\n\n'
+              'Mohon tunggu konfirmasi dari admin.',
               textAlign: TextAlign.center,
               style: AppTheme.bodyMedium,
             ),

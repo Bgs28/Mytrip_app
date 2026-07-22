@@ -58,26 +58,37 @@ class BookingProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      print('📤 Creating booking with:');
+      print('   type: $type');
+      print('   itemId: $itemId');
+      print('   totalPrice: $totalPrice');
+
       final response = await _bookingService.createBooking(
         type: type,
         itemId: itemId,
         totalPrice: totalPrice,
       );
 
+      print('📥 Booking response success: ${response.success}');
+      print('📥 Booking response data: ${response.data}');
+
       if (response.success && response.data != null) {
-        // Add new booking to list
-        _bookings.insert(0, response.data!);
-        _selectedBooking = response.data;
+        final booking = response.data!;
+        print('✅ Booking created: ${booking.id}');
+        _bookings.insert(0, booking);
+        _selectedBooking = booking;
         _isCreating = false;
         notifyListeners();
         return true;
       } else {
+        print('❌ Booking failed: ${response.message}');
         _error = response.message;
         _isCreating = false;
         notifyListeners();
         return false;
       }
     } catch (e) {
+      print('❌ Booking error: $e');
       _error = 'Terjadi kesalahan: $e';
       _isCreating = false;
       notifyListeners();

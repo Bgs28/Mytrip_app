@@ -47,15 +47,19 @@ class StatusBadge extends StatelessWidget {
           color: AppTheme.warning,
           icon: Icons.hourglass_top,
         );
+      case 'awaiting_verification':
+        return _StatusConfig(
+          label: 'Menunggu Verifikasi',
+          color: Colors.orange,
+          icon: Icons.pending,
+        );
       case 'paid':
-      case 'completed':
         return _StatusConfig(
           label: 'Paid',
           color: AppTheme.success,
           icon: Icons.check_circle,
         );
       case 'cancel':
-      case 'cancelled':
         return _StatusConfig(
           label: 'Cancelled',
           color: AppTheme.error,

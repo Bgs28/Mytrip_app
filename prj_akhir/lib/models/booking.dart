@@ -1,15 +1,16 @@
-// lib/models/booking.dart
+// lib/models/booking.dart - Perbaiki parsing totalPrice dan discountAmount
+
 import 'user.dart';
 
 class Booking {
   final int id;
   final int userId;
-  final String type; // 'bus', 'train', 'hotel'
+  final String type;
   final int itemId;
   final String bookingCode;
   final int totalPrice;
   final int discountAmount;
-  final String status; // 'pending', 'paid', 'cancel'
+  final String status;
   final DateTime createdAt;
   final DateTime updatedAt;
   final User? user;
@@ -43,6 +44,20 @@ class Booking {
       return 0;
     }
 
+    // Helper function untuk convert ke double dengan aman
+    double parseToDouble(dynamic value) {
+      if (value == null) return 0.0;
+      if (value is double) return value;
+      if (value is int) return value.toDouble();
+      if (value is String) {
+        // Hapus titik dan koma, lalu parse
+        final cleaned = value.replaceAll(RegExp(r'[^0-9.]'), '');
+        if (cleaned.isEmpty) return 0.0;
+        return double.tryParse(cleaned) ?? 0.0;
+      }
+      return 0.0;
+    }
+
     return Booking(
       id: json['id'] ?? 0,
       userId: json['user_id'] ?? 0,
@@ -50,7 +65,7 @@ class Booking {
       itemId: json['item_id'] ?? 0,
       bookingCode: json['booking_code'] ?? '',
       totalPrice: parseToInt(json['total_price']),
-      discountAmount: parseToInt(json['discount_amount']),
+      discountAmount: parseToInt(json['discount_amount'] ?? 0),
       status: json['status'] ?? 'pending',
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at']) ?? DateTime.now()
@@ -115,6 +130,8 @@ class Booking {
         return 'Paid';
       case 'cancel':
         return 'Cancelled';
+      case 'awaiting_verification':
+        return 'Menunggu Verifikasi';
       default:
         return status;
     }
@@ -125,12 +142,30 @@ class Booking {
     switch (status.toLowerCase()) {
       case 'pending':
         return '#FBBC04';
+      case 'awaiting_verification':
+        return '#FF9800'; // Orange
       case 'paid':
         return '#34A853';
       case 'cancel':
         return '#EA4335';
       default:
         return '#80868B';
+    }
+  }
+
+  // Status badge icon
+  String get statusIcon {
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return '⏳';
+      case 'awaiting_verification':
+        return '🔄';
+      case 'paid':
+        return '✅';
+      case 'cancel':
+        return '❌';
+      default:
+        return '📋';
     }
   }
 }

@@ -1,6 +1,7 @@
 // lib/services/payment_service.dart
 import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import '../models/payment.dart';
 import '../models/api_response.dart';
 import 'api_service.dart';
@@ -51,24 +52,54 @@ class PaymentService {
   }
 
   // Upload proof of payment
+  // Upload proof of payment - FIX URL
   Future<ApiResponse<Payment>> uploadProof({
     required int paymentId,
     required File proofFile,
   }) async {
     try {
-      final formData = FormData.fromMap({
-        'proof_of_payment': await MultipartFile.fromFile(
-          proofFile.path,
-          filename: proofFile.path.split('/').last,
-        ),
-      });
+      // URL yang benar
+      final url =
+          '${AppConstants.baseUrl}${AppConstants.paymentsEndpoint}/$paymentId/upload-proof';
+      // debugPrint('📤 Uploading to: $url');
 
-      final response = await _apiService.dio.post(
-        '${AppConstants.baseUrl}/payments/$paymentId/upload-proof',
-        data: formData,
+      // Cek apakah file ada
+      if (!await proofFile.exists()) {
+        return ApiResponse<Payment>.error('File tidak ditemukan');
+      }
+
+      // Cek ukuran file
+      final size = await proofFile.length();
+      debugPrint('📦 File size: $size bytes');
+      if (size > 5 * 1024 * 1024) {
+        return ApiResponse<Payment>.error(
+          'Ukuran file terlalu besar (maksimal 5MB)',
+        );
+      }
+
+      // Untuk semua platform, kita gunakan MultipartFile
+      final bytes = await proofFile.readAsBytes();
+      final multipartFile = MultipartFile.fromBytes(
+        bytes,
+        filename: 'proof_${DateTime.now().millisecondsSinceEpoch}.jpg',
+        contentType: DioMediaType.parse('image/jpeg'),
       );
 
-      if (response.statusCode == 200) {
+      final formData = FormData.fromMap({'proof_of_payment': multipartFile});
+
+      final response = await _apiService.dio.post(
+        url,
+        data: formData,
+        options: Options(
+          headers: {'Content-Type': 'multipart/form-data'},
+          validateStatus: (status) => status != null && status < 500,
+        ),
+      );
+
+      debugPrint('📥 Response Status: ${response.statusCode}');
+      debugPrint('📥 Response Data: ${response.data}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
         final data = response.data;
         if (data['success'] == true) {
           final payment = Payment.fromJson(data['data']);
@@ -85,10 +116,27 @@ class PaymentService {
       }
 
       return ApiResponse<Payment>.error(
-        'Upload gagal',
+        'Upload gagal: ${response.statusCode}',
         statusCode: response.statusCode,
       );
+    } on DioException catch (e) {
+      debugPrint('❌ Dio Error: ${e.message}');
+      debugPrint('❌ Response: ${e.response?.data}');
+      debugPrint('❌ Status Code: ${e.response?.statusCode}');
+
+      String message = 'Gagal upload bukti pembayaran';
+      if (e.response?.data != null) {
+        final data = e.response?.data;
+        if (data is Map && data.containsKey('message')) {
+          message = data['message'];
+        }
+      }
+      return ApiResponse<Payment>.error(
+        message,
+        statusCode: e.response?.statusCode,
+      );
     } catch (e) {
+      debugPrint('❌ Error: $e');
       return ApiResponse<Payment>.error('Terjadi kesalahan: $e');
     }
   }

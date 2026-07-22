@@ -16,6 +16,7 @@ import '../../widgets/error_widget.dart';
 import '../../widgets/status_badge.dart';
 import '../../widgets/custom_button.dart';
 import '../payments/payment_upload_screen.dart'; // Import Payment Upload Screen
+import '../trips/e_ticket_screen.dart'; // Import E-Ticket Screen
 
 class BookingDetailScreen extends StatefulWidget {
   final int bookingId;
@@ -383,19 +384,20 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppTheme.warning.withOpacity(0.1),
+                  color: Colors.orange.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppTheme.warning),
+                  border: Border.all(color: Colors.orange),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.hourglass_top, color: AppTheme.warning),
+                    const Icon(Icons.pending, color: Colors.orange),
                     const SizedBox(width: 8),
                     const Expanded(
                       child: Text(
-                        'Menunggu pembayaran. Silahkan transfer sesuai instruksi.',
+                        'Menunggu Verifikasi Admin.\n'
+                        'Bukti pembayaran telah terkirim. Mohon tunggu konfirmasi dari admin.',
                         style: TextStyle(
-                          color: AppTheme.warning,
+                          color: Colors.orange,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -436,19 +438,36 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
   }
 
   Widget _buildActionButtons(BuildContext context, Booking booking) {
-    final status = booking.status.toLowerCase();
-
-    // Jika status paid atau cancel, hanya tombol kembali
-    if (status == 'paid' || status == 'cancel') {
-      return CustomButton(
-        text: 'Kembali ke Riwayat',
-        onPressed: () => Navigator.pop(context),
-        isFullWidth: true,
+    // Jika status paid, tampilkan tombol E-Ticket
+    if (booking.status == 'paid') {
+      return Column(
+        children: [
+          CustomButton(
+            text: '🎫 Lihat E-Ticket',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      ETicketScreen(bookingId: booking.id, booking: booking),
+                ),
+              );
+            },
+            isFullWidth: true,
+          ),
+          const SizedBox(height: 12),
+          CustomButton(
+            text: 'Kembali ke Riwayat',
+            onPressed: () => Navigator.pop(context),
+            isOutlined: true,
+            isFullWidth: true,
+          ),
+        ],
       );
     }
 
     // Jika status pending, tampilkan tombol upload dan cancel
-    if (status == 'pending') {
+    if (booking.status == 'pending') {
       return Column(
         children: [
           CustomButton(
@@ -501,6 +520,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
   void _showCancelDialog(Booking booking) {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) => AlertDialog(
         title: const Text('Batalkan Booking'),
         content: Text(
@@ -513,24 +533,47 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
           ),
           TextButton(
             onPressed: () async {
+              // Tutup dialog terlebih dahulu
               Navigator.pop(context);
 
-              final bookingProvider = Provider.of<BookingProvider>(
-                context,
-                listen: false,
-              );
-              final success = await bookingProvider.cancelBooking(booking.id);
+              // Tampilkan loading
+              AppHelpers.showLoadingDialog(context);
 
-              if (success && mounted) {
-                AppHelpers.showSnackBar(context, 'Booking berhasil dibatalkan');
-                // Refresh data
-                await _loadData();
-              } else if (mounted && bookingProvider.error != null) {
-                AppHelpers.showSnackBar(
+              try {
+                final bookingProvider = Provider.of<BookingProvider>(
                   context,
-                  bookingProvider.error!,
-                  isError: true,
+                  listen: false,
                 );
+                final success = await bookingProvider.cancelBooking(booking.id);
+
+                // Tutup loading
+                if (context.mounted) {
+                  Navigator.pop(context); // Tutup loading
+                }
+
+                if (success && context.mounted) {
+                  AppHelpers.showSnackBar(
+                    context,
+                    'Booking berhasil dibatalkan',
+                  );
+                  await _loadData();
+                } else if (context.mounted && bookingProvider.error != null) {
+                  AppHelpers.showSnackBar(
+                    context,
+                    bookingProvider.error!,
+                    isError: true,
+                  );
+                }
+              } catch (e) {
+                // Tutup loading jika error
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  AppHelpers.showSnackBar(
+                    context,
+                    'Terjadi kesalahan: $e',
+                    isError: true,
+                  );
+                }
               }
             },
             style: TextButton.styleFrom(foregroundColor: AppTheme.error),

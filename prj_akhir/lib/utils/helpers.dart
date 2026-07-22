@@ -76,6 +76,14 @@ class AppHelpers {
     String message, {
     bool isError = false,
   }) {
+    // Cek apakah context masih valid
+    if (!context.mounted) return;
+
+    // Hapus loading dialog jika ada
+    if (Navigator.canPop(context)) {
+      // Jangan pop jika ada navigasi lain
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
