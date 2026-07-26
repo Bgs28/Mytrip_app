@@ -1,0 +1,34 @@
+1. Berikut adalah pembaruan urutan kerja proyek MyTrip kita:
+?? Rencana Step-by-Step Perbaikan & Pengembangan MyTrip (Terbaru)
+FASE 1: PERBAIKAN BUG AUTENTIKASI UTAMA (Fokus Pertama)
+* Langkah 1 (Flutter): Perbaikan Sinkronisasi ProfilePage
+o Mengubah logika halaman profil agar mendengarkan perubahan state secara dinamis (menggunakan lifecycle atau callback/route return) saat berpindah tab, sehingga status login dari LoginPage langsung sinkron tanpa perlu restart atau tertahan data lama.
+
+FASE 2: BACKEND LARAVEL (Penyediaan Database & API Filter/Pencarian)
+* Langkah 2: Migrasi Database Tambahan
+o Membuat tabel promos (Admin banner).
+o Menambahkan kolom kapasitas total_seats pada tabel perjalanan.
+o Membuat tabel booking_seats (untuk mencatat kursi Bus/Kereta yang sudah terisi).
+* Langkah 3: Pembuatan API Endpoint dengan Parameter Pencarian (Query Params)
+o GET /api/promos $\rightarrow$ Mengambil banner promo aktif.
+o GET /api/bus & GET /api/trains $\rightarrow$ Menerima filter query parameter (?origin=...&destination=...&date=...).
+o GET /api/hotels $\rightarrow$ Menerima filter query parameter (?location=...&check_in=...&check_out=...).
+o GET /api/tickets/{id}/seats $\rightarrow$ Mengembalikan daftar status kursi yang terisi/kosong.
+o POST /api/bookings $\rightarrow$ Modifikasi untuk menerima array seat_numbers.
+* Langkah 4: Web Panel Admin
+o CRUD Promo, CRUD Perjalanan/Hotel, dan Dashboard Manifest Penumpang.
+
+FASE 3: FRONTEND FLUTTER (Pengembangan UI & Form Pencarian Kontekstual)
+* Langkah 5: Inisialisasi Aplikasi
+o Membuat splash_screen.dart untuk auto-login check, lalu mendaftarkan rute baru di app_routes.dart.
+* Langkah 6: Implementasi Halaman Daftar Tiket & Form Pencarian Khusus
+o bus_list_page.dart & train_list_page.dart: Menyediakan widget pencarian dengan input Asal $\rightarrow$ Tujuan, Tanggal, dan Penumpang, lalu menampilkan hasil pencarian dari API secara dinamis.
+o hotel_list_page.dart: Menyediakan widget pencarian khusus Kota/Hotel, Tanggal Menginap (Check-in/Out), dan Kamar, lalu menampilkan list hotel dari API.
+o Semua halaman list ini bisa diakses bebas oleh Guest tanpa login.
+* Langkah 7: Interseptor AuthGuard pada Tombol Detail
+o Mengunci klik item tiket/hotel. Jika belum login, diarahkan ke LoginPage dengan callback redirect kembali ke detail tiket setelah sukses masuk.
+* Langkah 8: Halaman Denah Kursi (SeatSelectionPage)
+o Membuat denah kursi interaktif (Grid) khusus Bus dan Kereta berdasarkan data kursi terisi dari API Laravel. Untuk Hotel, langkah ini otomatis dilewati.
+* Langkah 9: Finalisasi Transaksi & HistoryPage
+o Mengirimkan data booking final (beserta nomor kursi untuk Bus/Kereta) ke API Laravel dan menampilkan riwayat transaksinya secara riil di halaman riwayat.
+

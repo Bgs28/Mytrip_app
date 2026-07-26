@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\BookingController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\PromoController;
 use App\Http\Controllers\Api\ETicketController;
+use App\Http\Controllers\Api\HotelRoomController;
 
 /*
 |--------------------------------------------------------------------------
@@ -29,6 +30,11 @@ Route::get('/trains', [TrainController::class, 'index']);    // List Kereta + Ca
 Route::get('/hotels', [HotelController::class, 'index']);    // List Hotel + Cari
 
 Route::get('/promos', [PromoController::class, 'index']);
+
+// hotel room routes
+Route::get('/hotels/{id}/rooms', [HotelRoomController::class, 'getHotelRooms']);
+Route::get('/rooms/{id}/availability', [HotelRoomController::class, 'checkAvailability']);
+
 
 // ==========================================
 // 2. AKSES SETELAH LOGIN (Wajib Token Sanctum)
@@ -72,4 +78,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // E-Ticket
     Route::get('/e-tickets/{booking_id}', [ETicketController::class, 'show']);
     Route::post('/e-tickets/check-in', [ETicketController::class, 'checkIn']);
+
+    // Room Booking
+    Route::post('/rooms/book', [HotelRoomController::class, 'bookRoom']);
+    Route::get('/room-bookings/{id}', [HotelRoomController::class, 'getRoomBookingDetail']);
 });

@@ -36,8 +36,8 @@ class Booking extends Model
     }
 
     // Relasi ke Room Booking (untuk hotel)
-    // public function roomBooking()
-    // {
-    //     return $this->hasOne(RoomBooking::class);
-    // }
+    public function roomBooking()
+    {
+        return $this->hasOne(RoomBooking::class);
+    }
 }

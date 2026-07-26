@@ -1,56 +1,201 @@
 @extends('admin.layouts.admin')
 
-@section('title', 'Edit Kereta')
+@section('title', 'Edit Kereta - ' . $train->train_name)
 
 @section('content')
-<div class="max-w-3xl bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-    <h1 class="text-xl font-bold text-gray-900 mb-6">Edit Jadwal Kereta Api</h1>
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+    <div class="flex items-center gap-4 mb-6">
+        <a href="{{ route('admin.trains.index') }}" class="text-blue-600 hover:text-blue-800">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+            </svg>
+        </a>
+        <h1 class="text-xl font-bold text-gray-900">✏️ Edit Kereta - {{ $train->train_name }}</h1>
+    </div>
 
-    <form action="{{ route('admin.trains.update', $train->id) }}" method="POST" class="space-y-5">
+    @if(session('success'))
+        <div class="mb-6 p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg text-sm">
+            {{ session('success') }}
+        </div>
+    @endif
+
+    @if(session('error'))
+        <div class="mb-6 p-4 bg-red-50 border border-red-200 text-red-800 rounded-lg text-sm">
+            {{ session('error') }}
+        </div>
+    @endif
+
+    @if($errors->any())
+        <div class="mb-6 p-4 bg-red-50 border border-red-200 text-red-800 rounded-lg text-sm">
+            <ul class="list-disc pl-4">
+                @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    <form method="POST" action="{{ route('admin.trains.update', $train->id) }}" class="space-y-6">
         @csrf
         @method('PUT')
-        
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Train Name -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Nama Kereta <span class="text-red-500">*</span>
+                </label>
+                <input type="text" name="train_name" value="{{ old('train_name', $train->train_name) }}" 
+                       class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none @error('train_name') border-red-500 @enderror"
+                       required>
+                @error('train_name')
+                    <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
+                @enderror
+            </div>
+
+            <!-- Price -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Harga Tiket <span class="text-red-500">*</span>
+                </label>
+                <input type="number" name="price" value="{{ old('price', $train->price) }}" 
+                       class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none @error('price') border-red-500 @enderror"
+                       required>
+                @error('price')
+                    <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
+                @enderror
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- From -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Stasiun Asal <span class="text-red-500">*</span>
+                </label>
+                <input type="text" name="from" value="{{ old('from', $train->from) }}" 
+                       class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none @error('from') border-red-500 @enderror"
+                       required>
+                @error('from')
+                    <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
+                @enderror
+            </div>
+
+            <!-- Destination -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Stasiun Tujuan <span class="text-red-500">*</span>
+                </label>
+                <input type="text" name="destination" value="{{ old('destination', $train->destination) }}" 
+                       class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none @error('destination') border-red-500 @enderror"
+                       required>
+                @error('destination')
+                    <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
+                @enderror
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Start Date -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Tanggal Mulai <span class="text-red-500">*</span>
+                </label>
+                <input type="date" name="start_date" value="{{ old('start_date', $train->start_date ? date('Y-m-d', strtotime($train->start_date)) : '') }}" 
+                       class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none @error('start_date') border-red-500 @enderror"
+                       required>
+                @error('start_date')
+                    <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
+                @enderror
+            </div>
+
+            <!-- End Date -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Tanggal Berakhir <span class="text-red-500">*</span>
+                </label>
+                <input type="date" name="end_date" value="{{ old('end_date', $train->end_date ? date('Y-m-d', strtotime($train->end_date)) : '') }}" 
+                       class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none @error('end_date') border-red-500 @enderror"
+                       required>
+                <p class="text-xs text-gray-400 mt-1">Jadwal akan digenerate ulang jika tanggal berubah</p>
+                @error('end_date')
+                    <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
+                @enderror
+            </div>
+        </div>
+
+        <!-- Departure Times -->
         <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1.5">Nama Kereta / Armada</label>
-            <input type="text" name="train_name" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm" value="{{ old('train_name', $train->train_name) }}" required>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+                Jam Keberangkatan <span class="text-red-500">*</span>
+            </label>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                @php
+                    $currentTimes = [];
+                    if ($train->departure_times) {
+                        $currentTimes = is_string($train->departure_times) ? json_decode($train->departure_times, true) : $train->departure_times;
+                    }
+                @endphp
+                @foreach($defaultTimes as $time)
+                    <label class="flex items-center gap-2 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition">
+                        <input type="checkbox" name="departure_times[]" value="{{ $time }}"
+                               {{ in_array($time, old('departure_times', $currentTimes)) ? 'checked' : '' }}
+                               class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                        <span class="text-sm font-medium">{{ $time }}</span>
+                    </label>
+                @endforeach
+            </div>
+            <p class="text-xs text-gray-400 mt-1">Pilih jam keberangkatan yang tersedia untuk setiap hari</p>
+            @error('departure_times')
+                <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
+            @enderror
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Seat -->
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1.5">Stasiun Asal (From)</label>
-                <input type="text" name="from" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm" value="{{ old('from', $train->from) }}" required>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Jumlah Kursi <span class="text-red-500">*</span>
+                </label>
+                <input type="number" name="seat" value="{{ old('seat', $train->seat) }}" 
+                       class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none @error('seat') border-red-500 @enderror"
+                       min="1" required>
+                <p class="text-xs text-gray-400 mt-1">Kursi akan digenerate ulang jika jumlah berubah</p>
+                @error('seat')
+                    <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
+                @enderror
             </div>
+
+            <!-- Duration -->
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1.5">Stasiun Tujuan (Destination)</label>
-                <input type="text" name="destination" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm" value="{{ old('destination', $train->destination) }}" required>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Durasi Perjalanan (menit) <span class="text-red-500">*</span>
+                </label>
+                <input type="number" name="duration_minutes" value="{{ old('duration_minutes', $train->duration_minutes ?? 120) }}" 
+                       class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none @error('duration_minutes') border-red-500 @enderror"
+                       min="1" required>
+                <p class="text-xs text-gray-400 mt-1">Waktu tiba akan dihitung otomatis dari jam berangkat + durasi</p>
+                @error('duration_minutes')
+                    <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
+                @enderror
             </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1.5">Jam Keberangkatan</label>
-                <input type="time" name="departure_time" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm" value="{{ old('departure_time', \Carbon\Carbon::parse($train->departure_time)->format('H:i')) }}" required>
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1.5">Jam Kedatangan</label>
-                <input type="time" name="arrival_time" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm" value="{{ old('arrival_time', \Carbon\Carbon::parse($train->arrival_time)->format('H:i')) }}" required>
-            </div>
+        <!-- Status -->
+        <div class="flex items-center gap-2">
+            <input type="checkbox" name="status" value="1" {{ old('status', $train->status == 'active') ? 'checked' : '' }}
+                   class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+            <label class="text-sm font-medium text-gray-700">Aktif</label>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1.5">Harga Tiket (Rp)</label>
-                <input type="number" name="price" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm" value="{{ old('price', $train->price) }}" required>
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1.5">Jumlah Kursi Tersedia</label>
-                <input type="number" name="seat" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm" value="{{ old('seat', $train->seat) }}" required>
-            </div>
-        </div>
-
-        <div class="flex items-center gap-3 pt-4 border-t">
-            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2 rounded-lg text-sm">Perbarui Jadwal</button>
-            <a href="{{ route('admin.trains.index') }}" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-5 py-2 rounded-lg text-sm">Kembali</a>
+        <!-- Submit -->
+        <div class="flex gap-3 pt-4 border-t border-gray-200">
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition">
+                Update Kereta
+            </button>
+            <a href="{{ route('admin.trains.index') }}" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-2 rounded-lg text-sm font-medium transition">
+                Batal
+            </a>
         </div>
     </form>
 </div>

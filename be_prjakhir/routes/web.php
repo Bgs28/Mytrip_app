@@ -9,6 +9,9 @@ use App\Http\Controllers\Admin\TrainController;
 use App\Http\Controllers\Admin\BusController;
 use App\Http\Controllers\Admin\BookingController;
 use App\Http\Controllers\Admin\PromoController;
+use App\Http\Controllers\Admin\RoomController;
+use App\Http\Controllers\Admin\TrainSeatController;
+use App\Http\Controllers\Admin\BusSeatController;
 
 // Web Routes - Admin Panel
 
@@ -38,11 +41,28 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // CRUD Kelola Hotel
         Route::resource('hotels', HotelController::class);
 
+        // CRUD Kelola Room
+        Route::resource('rooms', RoomController::class);
+        Route::post('/rooms/{id}/toggle-availability', [RoomController::class, 'toggleAvailability'])
+            ->name('rooms.toggleAvailability');
+
         // CRUD kelola Train
         Route::resource('trains', TrainController::class);
         
         // CRUD kelola Bus
         Route::resource('buses', BusController::class);
+
+        // Route Train Seats
+        Route::get('/train-seats', [TrainSeatController::class, 'index'])->name('train-seats.index');
+        Route::get('/train-seats/{id}', [TrainSeatController::class, 'show'])->name('train-seats.show');
+        Route::post('/train-seats/{id}/toggle-availability', [TrainSeatController::class, 'toggleAvailability'])->name('train-seats.toggleAvailability');
+        Route::post('/train-seats/regenerate', [TrainSeatController::class, 'regenerate'])->name('train-seats.regenerate');
+
+        // Route Bus Seats
+        Route::get('/bus-seats', [BusSeatController::class, 'index'])->name('bus-seats.index');
+        Route::get('/bus-seats/{id}', [BusSeatController::class, 'show'])->name('bus-seats.show');
+        Route::post('/bus-seats/{id}/toggle-availability', [BusSeatController::class, 'toggleAvailability'])->name('bus-seats.toggleAvailability');
+        Route::post('/bus-seats/regenerate', [BusSeatController::class, 'regenerate'])->name('bus-seats.regenerate');
 
         // Route Kelola Booking Admin
         Route::get('/bookings', [BookingController::class, 'index'])->name('booking.index');
