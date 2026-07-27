@@ -1,17 +1,18 @@
-// lib/views/bookings/booking_list_screen.dart
+// lib/views/bookings/booking_list_screen.dart - Update dengan payment status
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/booking_provider.dart';
-import '../../providers/auth_provider.dart';
-import '../../models/booking.dart'; // Tambahkan import Booking
+import '../../models/booking.dart';
+import '../../models/payment.dart';
+import '../../utils/theme.dart';
+import '../../utils/helpers.dart';
 import '../../widgets/booking_card.dart';
 import '../../widgets/loading_widget.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/error_widget.dart';
 import '../../widgets/custom_button.dart';
-import '../../utils/theme.dart';
-import '../../utils/helpers.dart';
 import 'booking_detail_screen.dart';
+import '../payments/payment_upload_screen.dart';
 
 class BookingListScreen extends StatefulWidget {
   const BookingListScreen({super.key});
@@ -112,7 +113,6 @@ class _BookingListScreenState extends State<BookingListScreen>
                   CustomButton(
                     text: 'Cari Tiket Sekarang',
                     onPressed: () {
-                      // Navigate to home
                       Navigator.popUntil(context, (route) => route.isFirst);
                     },
                     isFullWidth: false,
@@ -142,12 +142,10 @@ class _BookingListScreenState extends State<BookingListScreen>
     );
   }
 
-  // FIX: Tambahkan null check untuk status
   List<Booking> _getFilteredBookings(List<Booking> bookings) {
     if (_selectedFilter == 'Semua') return bookings;
 
     return bookings.where((booking) {
-      // Null check menggunakan ?. dan ?? untuk status
       final status = booking.status ?? '';
       return status.toLowerCase() == _selectedFilter.toLowerCase();
     }).toList();

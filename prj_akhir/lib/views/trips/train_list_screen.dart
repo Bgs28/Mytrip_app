@@ -39,6 +39,7 @@ class _TrainListScreenState extends State<TrainListScreen> {
       appBar: AppBar(
         title: const Text('Daftar Kereta'),
         backgroundColor: AppTheme.white,
+        foregroundColor: AppTheme.black,
         elevation: 0,
         actions: [
           IconButton(

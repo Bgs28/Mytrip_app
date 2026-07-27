@@ -7,9 +7,18 @@ use Illuminate\Database\Eloquent\Model;
 class Payment extends Model
 {
     protected $fillable = [
-        'booking_id', 'user_id', 'promo_id', 'invoice_number', 'base_amount',
-        'discount_amount', 'total_amount', 'payment_method', 'status',
-        'proof_of_payment', 'paid_at', 'notes'
+        'booking_id',
+        'user_id',
+        'promo_id',
+        'invoice_number',
+        'base_amount',
+        'discount_amount',
+        'total_amount',
+        'payment_method',
+        'status',
+        'proof_of_payment',
+        'paid_at',
+        'notes'
     ];
 
     protected $casts = [
@@ -45,10 +54,30 @@ class Payment extends Model
             'bank_transfer_mandiri' => 'Bank Transfer Mandiri',
             'bank_transfer_bni' => 'Bank Transfer BNI',
             'ovo' => 'OVO',
-            'gopay' => 'GoPay',
+            'gopay' => 'GoPay'
         ];
-        
         return $methods[$this->payment_method] ?? $this->payment_method;
+    }
+
+    // Accessor untuk status label
+    public function getStatusLabelAttribute()
+    {
+        $statuses = [
+            'pending' => 'Menunggu Verifikasi',
+            'paid' => 'Lunas',
+            'failed' => 'Gagal',
+            'refunded' => 'Dibatalkan'
+        ];
+        return $statuses[$this->status] ?? $this->status;
+    }
+
+    // Accessor untuk proof URL
+    public function getProofUrlAttribute()
+    {
+        if ($this->proof_of_payment) {
+            return asset('storage/payments/' . $this->proof_of_payment);
+        }
+        return null;
     }
 
     // Generate invoice number

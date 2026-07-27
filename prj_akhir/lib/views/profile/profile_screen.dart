@@ -312,7 +312,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 final mainScreen = context
                     .findAncestorStateOfType<State<MainScreen>>();
                 if (mainScreen != null) {
-                  (mainScreen as dynamic).changeTab(4); // Index 4 = Booking tab
+                  (mainScreen as dynamic).changeTab(1); // Index 1 = Riwayat tab
                 }
               } else {
                 AppHelpers.showSnackBar(context, 'Fitur ini akan segera hadir');

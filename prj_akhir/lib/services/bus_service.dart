@@ -1,5 +1,6 @@
 // lib/services/bus_service.dart
 import '../models/bus.dart';
+import '../models/bus_schedule.dart';
 import '../models/api_response.dart';
 import 'api_service.dart';
 import '../utils/constants.dart';
@@ -65,6 +66,94 @@ class BusService {
       );
     } catch (e) {
       return ApiResponse<Bus>.error('Terjadi kesalahan: $e');
+    }
+  }
+
+  Future<ApiResponse<List<BusSchedule>>> getBusSchedules(int busId) async {
+    try {
+      final response = await _apiService.get(
+        '${AppConstants.baseUrl}${AppConstants.busesEndpoint}/$busId/schedules',
+      );
+
+      if (response.success && response.data != null) {
+        final data = response.data as List;
+        final schedules = data
+            .map((item) => BusSchedule.fromJson(item))
+            .toList();
+        return ApiResponse<List<BusSchedule>>(
+          success: true,
+          message: response.message,
+          data: schedules,
+        );
+      }
+
+      return ApiResponse<List<BusSchedule>>.error(
+        response.message,
+        statusCode: response.statusCode,
+      );
+    } catch (e) {
+      return ApiResponse<List<BusSchedule>>.error('Terjadi kesalahan: $e');
+    }
+  }
+
+  // Get bus seats with availability for a schedule
+  Future<ApiResponse<List<Map<String, dynamic>>>> getBusSeats({
+    required int busId,
+    required int scheduleId,
+  }) async {
+    try {
+      final response = await _apiService.get(
+        '${AppConstants.baseUrl}${AppConstants.busesEndpoint}/$busId/seats',
+        queryParameters: {'schedule_id': scheduleId},
+      );
+
+      if (response.success && response.data != null) {
+        final data = response.data as List;
+        return ApiResponse<List<Map<String, dynamic>>>(
+          success: true,
+          message: response.message,
+          data: data.map((item) => item as Map<String, dynamic>).toList(),
+        );
+      }
+
+      return ApiResponse<List<Map<String, dynamic>>>.error(
+        response.message,
+        statusCode: response.statusCode,
+      );
+    } catch (e) {
+      return ApiResponse<List<Map<String, dynamic>>>.error(
+        'Terjadi kesalahan: $e',
+      );
+    }
+  }
+
+  // Book bus seats
+  Future<ApiResponse<Map<String, dynamic>>> bookBusSeats({
+    required int busId,
+    required int scheduleId,
+    required List<int> seatIds,
+    required String? notes,
+  }) async {
+    try {
+      final response = await _apiService.post(
+        '${AppConstants.baseUrl}${AppConstants.busesEndpoint}/$busId/book',
+        data: {'schedule_id': scheduleId, 'seat_ids': seatIds, 'notes': notes},
+      );
+
+      if (response.success && response.data != null) {
+        return ApiResponse<Map<String, dynamic>>(
+          success: true,
+          message: response.message,
+          data: response.data as Map<String, dynamic>?,
+        );
+      }
+
+      return ApiResponse<Map<String, dynamic>>.error(
+        response.message,
+        statusCode: response.statusCode,
+      );
+    } catch (e) {
+      return ApiResponse<Map<String, dynamic>>.error('Terjadi kesalahan: $e');
     }
   }
 }

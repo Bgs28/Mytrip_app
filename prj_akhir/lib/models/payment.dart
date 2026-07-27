@@ -1,3 +1,4 @@
+// lib/models/payment.dart
 import 'booking.dart';
 import 'promo.dart';
 import 'user.dart';
@@ -44,13 +45,11 @@ class Payment {
   });
 
   factory Payment.fromJson(Map<String, dynamic> json) {
-    // Helper function untuk convert ke double dengan aman
     double parseToDouble(dynamic value) {
       if (value == null) return 0.0;
       if (value is double) return value;
       if (value is int) return value.toDouble();
       if (value is String) {
-        // Hapus karakter non-digit dan non-dot
         final cleaned = value.replaceAll(RegExp(r'[^0-9.]'), '');
         if (cleaned.isEmpty) return 0.0;
         return double.tryParse(cleaned) ?? 0.0;
@@ -88,46 +87,23 @@ class Payment {
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'booking_id': bookingId,
-      'user_id': userId,
-      'promo_id': promoId,
-      'invoice_number': invoiceNumber,
-      'base_amount': baseAmount,
-      'discount_amount': discountAmount,
-      'total_amount': totalAmount,
-      'payment_method': paymentMethod,
-      'status': status,
-      'proof_of_payment': proofOfPayment,
-      'paid_at': paidAt?.toIso8601String(),
-      'notes': notes,
-      'created_at': createdAt.toIso8601String(),
-      'updated_at': updatedAt.toIso8601String(),
-      'booking': booking?.toJson(),
-      'promo': promoId != null ? {'id': promoId} : null,
-      'user': user?.toJson(),
-    };
-  }
-
   String get statusLabel {
-    switch (status.toLowerCase()) {
+    switch (status) {
       case 'pending':
         return 'Menunggu Verifikasi';
       case 'paid':
-        return 'Paid';
+        return 'Lunas';
       case 'failed':
-        return 'Failed';
+        return 'Gagal';
       case 'refunded':
-        return 'Refunded';
+        return 'Dibatalkan';
       default:
         return status;
     }
   }
 
   String get statusColor {
-    switch (status.toLowerCase()) {
+    switch (status) {
       case 'pending':
         return '#FF9800';
       case 'paid':
@@ -157,4 +133,10 @@ class Payment {
         return paymentMethod;
     }
   }
+
+  bool get hasProof => proofOfPayment != null && proofOfPayment!.isNotEmpty;
+  String get proofUrl => proofOfPayment != null
+      // ? 'http://192.168.126.112:8000/storage/payments/$proofOfPayment'
+      ? 'http://127.0.0.1:8000/storage/payments/$proofOfPayment'
+      : '';
 }

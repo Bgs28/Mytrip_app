@@ -12,7 +12,10 @@ import '../../widgets/trip_card.dart';
 import '../../widgets/loading_widget.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/custom_button.dart';
-import '../../widgets/status_badge.dart'; // Tambahkan import status_badge
+import '../../widgets/status_badge.dart';
+import '../trips/bus_list_screen.dart';
+import '../trips/train_list_screen.dart';
+import '../trips/hotel_list_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -23,9 +26,6 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   final TextEditingController _searchController = TextEditingController();
-  String _selectedCategory = 'Semua';
-
-  final List<String> _categories = ['Semua', 'Bus', 'Kereta', 'Hotel'];
 
   @override
   void initState() {
@@ -72,14 +72,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 _buildHeader(),
                 const SizedBox(height: 20),
                 _buildSearchBar(),
-                const SizedBox(height: 20),
-                _buildCategoryFilter(),
-                const SizedBox(height: 20),
-                _buildQuickStats(),
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
+                _buildMenuCards(),
+                const SizedBox(height: 24),
                 _buildPopularTrips(),
-                const SizedBox(height: 20),
-                _buildRecentBookings(),
+                const SizedBox(height: 16),
               ],
             ),
           ),
@@ -170,42 +167,124 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildCategoryFilter() {
-    return SizedBox(
-      height: 40,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: _categories.length,
-        itemBuilder: (context, index) {
-          final category = _categories[index];
-          final isSelected = _selectedCategory == category;
-          return GestureDetector(
-            onTap: () {
-              setState(() {
-                _selectedCategory = category;
-              });
-              _filterByCategory(category);
-            },
-            child: Container(
-              margin: const EdgeInsets.only(right: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: isSelected ? AppTheme.primaryBlue : Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: isSelected ? AppTheme.primaryBlue : AppTheme.lightGrey,
-                ),
+  Widget _buildMenuCards() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Layanan Kami', style: AppTheme.heading3),
+        const SizedBox(height: 14),
+        Row(
+          children: [
+            _buildMenuCard(
+              emoji: '🚆',
+              label: 'Kereta',
+              subtitle: 'Tiket kereta api',
+              gradient: const LinearGradient(
+                colors: [Color(0xFF7C3AED), Color(0xFF9F67FA)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-              child: Text(
-                category,
-                style: TextStyle(
-                  color: isSelected ? Colors.white : AppTheme.grey,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                ),
-              ),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const TrainListScreen(),
+                  ),
+                );
+              },
             ),
-          );
-        },
+            const SizedBox(width: 12),
+            _buildMenuCard(
+              emoji: '🚌',
+              label: 'Bus',
+              subtitle: 'Tiket bus antarkota',
+              gradient: const LinearGradient(
+                colors: [Color(0xFF1A73E8), Color(0xFF4285F4)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const BusListScreen(),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(width: 12),
+            _buildMenuCard(
+              emoji: '🏨',
+              label: 'Hotel',
+              subtitle: 'Cari & booking hotel',
+              gradient: const LinearGradient(
+                colors: [Color(0xFFE67E22), Color(0xFFF39C12)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const HotelListScreen(),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMenuCard({
+    required String emoji,
+    required String label,
+    required String subtitle,
+    required LinearGradient gradient,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 8),
+          decoration: BoxDecoration(
+            gradient: gradient,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: gradient.colors.first.withOpacity(0.35),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(emoji, style: const TextStyle(fontSize: 32)),
+              const SizedBox(height: 8),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 10,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -284,15 +363,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text('✨ Populer', style: AppTheme.heading3),
-            TextButton(
-              onPressed: () {
-                // Navigasi ke tab Bus menggunakan Navigator
-                // Karena kita tidak bisa akses _MainScreenState dari sini
-                Navigator.pushNamed(context, '/main');
-                // Setelah navigasi, kita bisa menggunakan arguments
-              },
-              child: Text('Lihat Semua', style: AppTheme.linkText),
-            ),
           ],
         ),
         const SizedBox(height: 12),

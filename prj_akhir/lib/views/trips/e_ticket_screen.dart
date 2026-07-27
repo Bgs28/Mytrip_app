@@ -31,6 +31,7 @@ class _ETicketScreenState extends State<ETicketScreen> {
   ETicket? _eTicket;
   String? _error;
   String? _qrCodeData;
+  bool _isCheckingIn = false;
 
   @override
   void initState() {
@@ -47,24 +48,28 @@ class _ETicketScreenState extends State<ETicketScreen> {
     try {
       final response = await _eTicketService.getETicket(widget.bookingId);
 
-      if (response.success && response.data != null) {
-        final data = response.data!;
-        _eTicket = ETicket.fromJson(data['e_ticket'] ?? {});
-        _qrCodeData = data['qr_code'];
+      if (mounted) {
+        if (response.success && response.data != null) {
+          final data = response.data!;
+          _eTicket = ETicket.fromJson(data['e_ticket'] ?? {});
+          _qrCodeData = data['qr_code'];
+          setState(() {
+            _isLoading = false;
+          });
+        } else {
+          setState(() {
+            _error = response.message ?? 'Gagal mengambil E-Ticket';
+            _isLoading = false;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
         setState(() {
-          _isLoading = false;
-        });
-      } else {
-        setState(() {
-          _error = response.message ?? 'Gagal mengambil E-Ticket';
+          _error = 'Terjadi kesalahan: $e';
           _isLoading = false;
         });
       }
-    } catch (e) {
-      setState(() {
-        _error = 'Terjadi kesalahan: $e';
-        _isLoading = false;
-      });
     }
   }
 
@@ -88,6 +93,37 @@ class _ETicketScreenState extends State<ETicketScreen> {
           ? const LoadingWidget()
           : _error != null
           ? ErrorWidgetCustom(message: _error!, onRetry: _loadETicket)
+          : _eTicket == null
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.confirmation_number_outlined,
+                    size: 64,
+                    color: AppTheme.grey,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'E-Ticket Belum Tersedia',
+                    style: AppTheme.heading3,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Tiket akan tersedia setelah pembayaran dikonfirmasi',
+                    style: AppTheme.bodyMedium.copyWith(color: AppTheme.grey),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  CustomButton(
+                    text: 'Kembali ke Riwayat',
+                    onPressed: () => Navigator.pop(context),
+                    isFullWidth: false,
+                    width: 200,
+                  ),
+                ],
+              ),
+            )
           : _buildETicketContent(),
     );
   }
@@ -182,7 +218,7 @@ class _ETicketScreenState extends State<ETicketScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              widget.booking.typeLabel,
+              _eTicket!.booking?.typeLabel ?? widget.booking.typeLabel,
               style: const TextStyle(color: Colors.white70, fontSize: 14),
             ),
             const SizedBox(height: 16),
@@ -311,7 +347,6 @@ class _ETicketScreenState extends State<ETicketScreen> {
                   IconButton(
                     onPressed: () {
                       // Copy to clipboard
-                      // TODO: Implement copy
                       AppHelpers.showSnackBar(
                         context,
                         'Kode check-in disalin!',
@@ -382,8 +417,8 @@ class _ETicketScreenState extends State<ETicketScreen> {
       children: [
         if (!_eTicket!.isUsed) ...[
           CustomButton(
-            text: 'Check-in',
-            onPressed: _showCheckInDialog,
+            text: _isCheckingIn ? 'Memproses...' : 'Check-in',
+            onPressed: _isCheckingIn ? null : _showCheckInDialog,
             isFullWidth: true,
           ),
           const SizedBox(height: 12),
@@ -445,13 +480,18 @@ class _ETicketScreenState extends State<ETicketScreen> {
   }
 
   Future<void> _processCheckIn() async {
-    AppHelpers.showLoadingDialog(context);
+    setState(() {
+      _isCheckingIn = true;
+    });
 
     try {
       final response = await _eTicketService.checkIn(_eTicket!.checkInCode);
 
       if (!mounted) return;
-      Navigator.pop(context); // Close loading
+
+      setState(() {
+        _isCheckingIn = false;
+      });
 
       if (response.success) {
         AppHelpers.showSnackBar(
@@ -468,7 +508,9 @@ class _ETicketScreenState extends State<ETicketScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      Navigator.pop(context); // Close loading
+      setState(() {
+        _isCheckingIn = false;
+      });
       AppHelpers.showSnackBar(context, 'Terjadi kesalahan: $e', isError: true);
     }
   }

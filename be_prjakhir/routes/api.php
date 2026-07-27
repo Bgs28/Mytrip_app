@@ -74,7 +74,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/payments/{id}/upload-proof', [PaymentController::class, 'uploadProof']);
     Route::get('/payments/{id}', [PaymentController::class, 'show']);
     Route::get('/payments/history', [PaymentController::class, 'history']);
-
+    Route::get('/payments/booking/{bookingId}', [PaymentController::class, 'getByBooking']);
+    
     // E-Ticket
     Route::get('/e-tickets/{booking_id}', [ETicketController::class, 'show']);
     Route::post('/e-tickets/check-in', [ETicketController::class, 'checkIn']);

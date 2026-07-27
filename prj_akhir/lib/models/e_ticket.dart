@@ -1,4 +1,6 @@
 // lib/models/e_ticket.dart
+import 'booking.dart';
+
 class ETicket {
   final int id;
   final int bookingId;
@@ -12,6 +14,7 @@ class ETicket {
   final String checkInCode;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final Booking? booking;
 
   ETicket({
     required this.id,
@@ -26,6 +29,7 @@ class ETicket {
     required this.checkInCode,
     required this.createdAt,
     required this.updatedAt,
+    this.booking,
   });
 
   factory ETicket.fromJson(Map<String, dynamic> json) {
@@ -50,6 +54,9 @@ class ETicket {
       updatedAt: DateTime.parse(
         json['updated_at'] ?? DateTime.now().toIso8601String(),
       ),
+      booking: json['booking'] != null
+          ? Booking.fromJson(json['booking'])
+          : null,
     );
   }
 
@@ -63,5 +70,11 @@ class ETicket {
     if (isUsed) return '#80868B';
     if (DateTime.now().isAfter(validUntil)) return '#EA4335';
     return '#34A853';
+  }
+
+  String get statusIcon {
+    if (isUsed) return '✅';
+    if (DateTime.now().isAfter(validUntil)) return '⏰';
+    return '🟢';
   }
 }

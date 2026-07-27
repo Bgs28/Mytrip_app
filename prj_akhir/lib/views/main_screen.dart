@@ -1,16 +1,7 @@
 // lib/views/main_screen.dart
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../providers/auth_provider.dart';
-import '../providers/bus_provider.dart';
-import '../providers/train_provider.dart';
-import '../providers/hotel_provider.dart';
-import '../providers/booking_provider.dart';
 import '../utils/theme.dart';
 import 'dashboard/dashboard_screen.dart';
-import 'trips/hotel_list_screen.dart';
-import 'trips/train_list_screen.dart';
-import 'trips/bus_list_screen.dart';
 import 'bookings/booking_list_screen.dart';
 import 'profile/profile_screen.dart';
 
@@ -47,12 +38,9 @@ class _MainScreenState extends State<MainScreen> {
         body: IndexedStack(
           index: _selectedIndex,
           children: const [
-            DashboardScreen(),
-            BusListScreen(),
-            TrainListScreen(),
-            HotelListScreen(),
-            BookingListScreen(),
-            ProfileScreen(),
+            DashboardScreen(),    // index 0
+            BookingListScreen(),  // index 1
+            ProfileScreen(),      // index 2
           ],
         ),
         bottomNavigationBar: BottomNavigationBar(
@@ -68,21 +56,6 @@ class _MainScreenState extends State<MainScreen> {
               icon: Icon(Icons.home_outlined),
               activeIcon: Icon(Icons.home),
               label: 'Beranda',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.directions_bus_outlined),
-              activeIcon: Icon(Icons.directions_bus),
-              label: 'Bus',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.train_outlined),
-              activeIcon: Icon(Icons.train),
-              label: 'Kereta',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.hotel_outlined),
-              activeIcon: Icon(Icons.hotel),
-              label: 'Hotel',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.history_outlined),

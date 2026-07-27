@@ -17,8 +17,8 @@ class Room extends Model
         'bed_type',
         'size',
         'facilities',
-        'images',
         'thumbnail',
+        'images',
         'is_available'
     ];
 
@@ -90,8 +90,6 @@ class Room extends Model
         if ($this->thumbnail) {
             return asset('storage/rooms/' . $this->thumbnail);
         }
-        
-        // Default image
         return asset('images/default-room.jpg');
     }
 

@@ -37,6 +37,7 @@ class _HotelListScreenState extends State<HotelListScreen> {
       appBar: AppBar(
         title: const Text('Daftar Hotel'),
         backgroundColor: AppTheme.white,
+        foregroundColor: AppTheme.black,
         elevation: 0,
         actions: [
           IconButton(

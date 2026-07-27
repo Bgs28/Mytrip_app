@@ -7,6 +7,7 @@ class Bus {
   final String departureTime;
   final int price;
   final int seat;
+  final String? status; // Tambahkan field status
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -18,6 +19,7 @@ class Bus {
     required this.departureTime,
     required this.price,
     required this.seat,
+    this.status, // Tambahkan status
     required this.createdAt,
     required this.updatedAt,
   });
@@ -44,6 +46,7 @@ class Bus {
       departureTime: json['departure_time'] ?? '',
       price: parseToInt(json['price']),
       seat: parseToInt(json['seat']),
+      status: json['status'] ?? 'active', // Ambil status dari JSON
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at']) ?? DateTime.now()
           : DateTime.now(),
@@ -62,6 +65,7 @@ class Bus {
       'departure_time': departureTime,
       'price': price,
       'seat': seat,
+      'status': status,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };

@@ -1,4 +1,4 @@
-// lib/models/hotel.dart
+// lib/models/hotel.dart - Tambahkan status jika perlu
 class Hotel {
   final int id;
   final String name;
@@ -7,6 +7,7 @@ class Hotel {
   final int price;
   final double? rating;
   final String? image;
+  final String? status; // Tambahkan field status (optional)
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -18,6 +19,7 @@ class Hotel {
     required this.price,
     this.rating,
     this.image,
+    this.status,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -55,6 +57,7 @@ class Hotel {
       price: parseToInt(json['price']),
       rating: parseToDouble(json['rating']),
       image: json['image'],
+      status: json['status'] ?? 'active',
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at']) ?? DateTime.now()
           : DateTime.now(),
@@ -73,6 +76,7 @@ class Hotel {
       'price': price,
       'rating': rating,
       'image': image,
+      'status': status,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };

@@ -67,7 +67,7 @@ class RoomController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'hotel_id' => 'required|exists:hotels,id',
-            'room_number' => 'required|string|max:20|unique:rooms,room_number',
+            'room_number' => 'required|string|max:20|unique:rooms,room_number,NULL,id,hotel_id,' . $request->hotel_id, // Unique per hotel
             'room_type' => 'required|in:standard,deluxe,suite,family,presidential',
             'room_name' => 'required|string|max:100',
             'description' => 'nullable|string',
@@ -165,7 +165,7 @@ class RoomController extends Controller
 
         $validator = Validator::make($request->all(), [
             'hotel_id' => 'required|exists:hotels,id',
-            'room_number' => 'required|string|max:20|unique:rooms,room_number,' . $id,
+            'room_number' => 'required|string|max:20|unique:rooms,room_number,' . $id . ',id,hotel_id,' . $request->hotel_id, // Unique per hotel exclude self
             'room_type' => 'required|in:standard,deluxe,suite,family,presidential',
             'room_name' => 'required|string|max:100',
             'description' => 'nullable|string',

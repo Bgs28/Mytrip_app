@@ -1,6 +1,7 @@
-// lib/widgets/booking_card.dart
+// lib/widgets/booking_card.dart - Update dengan payment status
 import 'package:flutter/material.dart';
 import '../models/booking.dart';
+import '../models/payment.dart';
 import '../utils/theme.dart';
 import '../utils/helpers.dart';
 
@@ -50,13 +51,21 @@ class BookingCard extends StatelessWidget {
                           style: AppTheme.heading4.copyWith(fontSize: 16),
                         ),
                         Text(
-                          '${booking.typeLabel} • Item #${booking.itemId}',
+                          '${booking.typeLabel} • ${AppHelpers.formatDate(booking.createdAt)}',
                           style: AppTheme.bodySmall,
                         ),
                       ],
                     ),
                   ),
-                  _buildStatusBadge(),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      _buildStatusBadge(),
+                      const SizedBox(height: 4),
+                      if (booking.payment != null)
+                        _buildPaymentStatusBadge(booking.payment!),
+                    ],
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -81,18 +90,26 @@ class BookingCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text('Tanggal Booking', style: AppTheme.bodySmall),
-                      Text(
-                        AppHelpers.formatDate(booking.createdAt),
-                        style: AppTheme.bodyMedium.copyWith(
-                          fontWeight: FontWeight.w500,
+                  if (booking.payment != null && booking.payment!.hasProof)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppTheme.success.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppTheme.success),
+                      ),
+                      child: const Text(
+                        '📷 Bukti Terupload',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.success,
                         ),
                       ),
-                    ],
-                  ),
+                    ),
                 ],
               ),
             ],
@@ -125,7 +142,7 @@ class BookingCard extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(20),
@@ -135,8 +152,52 @@ class BookingCard extends StatelessWidget {
         label,
         style: TextStyle(
           color: color,
-          fontSize: 12,
+          fontSize: 11,
           fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPaymentStatusBadge(Payment payment) {
+    Color color;
+    String label;
+
+    switch (payment.status.toLowerCase()) {
+      case 'pending':
+        color = Colors.orange;
+        label = 'Menunggu Verifikasi';
+        break;
+      case 'paid':
+        color = AppTheme.success;
+        label = 'Lunas';
+        break;
+      case 'failed':
+        color = AppTheme.error;
+        label = 'Gagal';
+        break;
+      case 'refunded':
+        color = AppTheme.grey;
+        label = 'Dibatalkan';
+        break;
+      default:
+        color = AppTheme.grey;
+        label = payment.status;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color, width: 0.5),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 9,
+          fontWeight: FontWeight.w500,
         ),
       ),
     );

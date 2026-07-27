@@ -1,16 +1,19 @@
-// lib/views/trips/hotel_detail_screen.dart
+// lib/views/trips/hotel_detail_screen.dart - Update dengan Rooms
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/hotel_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/booking_provider.dart';
+import '../../services/room_service.dart';
 import '../../models/hotel.dart';
+import '../../models/room.dart';
 import '../../utils/theme.dart';
 import '../../utils/helpers.dart';
 import '../../widgets/loading_widget.dart';
 import '../../widgets/error_widget.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/status_badge.dart';
+import 'hotel_rooms_screen.dart';
 
 class HotelDetailScreen extends StatefulWidget {
   final int hotelId;
@@ -22,6 +25,10 @@ class HotelDetailScreen extends StatefulWidget {
 }
 
 class _HotelDetailScreenState extends State<HotelDetailScreen> {
+  final RoomService _roomService = RoomService();
+  List<Room> _rooms = [];
+  bool _isLoadingRooms = false;
+
   @override
   void initState() {
     super.initState();
@@ -31,6 +38,24 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
   Future<void> _loadData() async {
     final provider = Provider.of<HotelProvider>(context, listen: false);
     await provider.loadHotelDetail(widget.hotelId);
+    await _loadRooms();
+  }
+
+  Future<void> _loadRooms() async {
+    setState(() {
+      _isLoadingRooms = true;
+    });
+
+    final response = await _roomService.getRoomsByHotel(widget.hotelId);
+
+    if (mounted) {
+      setState(() {
+        if (response.success && response.data != null) {
+          _rooms = response.data!;
+        }
+        _isLoadingRooms = false;
+      });
+    }
   }
 
   @override
@@ -55,7 +80,7 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
             slivers: [
               // App Bar
               SliverAppBar(
-                expandedHeight: 250,
+                expandedHeight: 200,
                 pinned: true,
                 backgroundColor: AppTheme.white,
                 elevation: 0,
@@ -111,6 +136,8 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
                     _buildHotelInfo(hotel),
                     const SizedBox(height: 16),
                     _buildDescription(hotel),
+                    const SizedBox(height: 16),
+                    _buildRoomsSection(hotel),
                     const SizedBox(height: 16),
                     _buildPriceAndRating(hotel),
                     const SizedBox(height: 24),
@@ -223,6 +250,8 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
   }
 
   Widget _buildDescription(Hotel hotel) {
+    if (hotel.description == null) return const SizedBox.shrink();
+
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -234,9 +263,216 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
             const Text('📝 Deskripsi', style: AppTheme.heading4),
             const SizedBox(height: 8),
             Text(
-              hotel.description ?? 'Tidak ada deskripsi untuk hotel ini.',
+              hotel.description!,
               style: AppTheme.bodyMedium.copyWith(height: 1.6),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRoomsSection(Hotel hotel) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('🛏️ Kamar Tersedia', style: AppTheme.heading4),
+                if (_rooms.isNotEmpty)
+                  Text('${_rooms.length} kamar', style: AppTheme.bodySmall),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (_isLoadingRooms)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(20.0),
+                  child: CircularProgressIndicator(),
+                ),
+              )
+            else if (_rooms.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(20.0),
+                child: Center(child: Text('Belum ada kamar tersedia')),
+              )
+            else
+              SizedBox(
+                height: 280,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _rooms.length > 5 ? 5 : _rooms.length,
+                  itemBuilder: (context, index) {
+                    final room = _rooms[index];
+                    return _buildRoomCard(room, hotel);
+                  },
+                ),
+              ),
+            if (_rooms.length > 5)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => HotelRoomsScreen(
+                          hotelId: hotel.id,
+                          hotelName: hotel.name,
+                        ),
+                      ),
+                    );
+                  },
+                  child: Text(
+                    'Lihat Semua Kamar (${_rooms.length})',
+                    style: AppTheme.linkText,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRoomCard(Room room, Hotel hotel) {
+    return Container(
+      width: 200,
+      margin: const EdgeInsets.only(right: 12),
+      decoration: BoxDecoration(
+        color: room.isAvailable ? Colors.white : AppTheme.lightGrey,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: room.isAvailable ? AppTheme.primaryBlue : AppTheme.grey,
+          width: 1,
+        ),
+        boxShadow: AppTheme.cardShadow,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Room Image
+            Container(
+              height: 80,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: AppTheme.primaryLightestBlue,
+                borderRadius: BorderRadius.circular(8),
+                image: room.images != null && room.images!.isNotEmpty
+                    ? DecorationImage(
+                        image: NetworkImage(room.images![0]),
+                        fit: BoxFit.cover,
+                      )
+                    : null,
+              ),
+              child: room.images == null || room.images!.isEmpty
+                  ? const Icon(
+                      Icons.hotel,
+                      color: AppTheme.primaryBlue,
+                      size: 40,
+                    )
+                  : null,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              room.roomName,
+              style: AppTheme.bodyMedium.copyWith(fontWeight: FontWeight.w600),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryLightestBlue,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    room.roomTypeLabel,
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.primaryBlue,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppTheme.lightGrey,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    '${room.capacity} org',
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.grey,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              AppHelpers.formatCurrency(room.pricePerNight.toDouble()),
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.primaryBlue,
+              ),
+            ),
+            const SizedBox(height: 8),
+            if (room.isAvailable)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    _navigateToRoomBooking(room, hotel);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryBlue,
+                    foregroundColor: AppTheme.white,
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                  ),
+                  child: const Text('Pilih', style: TextStyle(fontSize: 12)),
+                ),
+              )
+            else
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppTheme.lightGrey,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Center(
+                  child: Text(
+                    'Tidak Tersedia',
+                    style: TextStyle(fontSize: 12, color: AppTheme.grey),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -258,9 +494,11 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
                   const Text('💰 Harga per Malam', style: AppTheme.bodySmall),
                   const SizedBox(height: 4),
                   Text(
-                    AppHelpers.formatCurrency(hotel.price.toDouble()),
+                    _rooms.isNotEmpty
+                        ? 'Mulai ${AppHelpers.formatCurrency(_rooms.map((r) => r.pricePerNight).reduce((a, b) => a < b ? a : b).toDouble())}'
+                        : 'Harga belum tersedia',
                     style: const TextStyle(
-                      fontSize: 24,
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: AppTheme.primaryBlue,
                     ),
@@ -305,67 +543,38 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
         return Consumer<BookingProvider>(
           builder: (context, bookingProvider, child) {
             return CustomButton(
-              text: 'Pesan Hotel Sekarang',
+              text: 'Lihat Semua Kamar',
               onPressed: bookingProvider.isCreating
                   ? null
-                  : () async {
-                      if (!authProvider.isLoggedIn) {
-                        final shouldLogin = await showDialog<bool>(
-                          context: context,
-                          barrierDismissible: false,
-                          builder: (context) => AlertDialog(
-                            title: const Text('Login Diperlukan'),
-                            content: const Text(
-                              'Anda harus login terlebih dahulu untuk memesan hotel.',
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, false),
-                                child: const Text('Batal'),
-                              ),
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, true),
-                                child: const Text(
-                                  'Login',
-                                  style: TextStyle(color: AppTheme.primaryBlue),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-
-                        if (shouldLogin == true && mounted) {
-                          Navigator.pushNamed(context, '/login');
-                        }
-                        return;
-                      }
-
-                      final result = await Navigator.pushNamed(
+                  : () {
+                      Navigator.push(
                         context,
-                        '/checkout',
-                        arguments: {
-                          'type': 'hotel',
-                          'itemId': hotel.id,
-                          'name': hotel.name,
-                          'price': hotel.price,
-                          'location': hotel.location,
-                          'rating': hotel.rating,
-                        },
+                        MaterialPageRoute(
+                          builder: (context) => HotelRoomsScreen(
+                            hotelId: hotel.id,
+                            hotelName: hotel.name,
+                          ),
+                        ),
                       );
-
-                      if (result == true && mounted) {
-                        AppHelpers.showSnackBar(
-                          context,
-                          'Pemesanan berhasil! Silahkan cek riwayat booking.',
-                        );
-                      }
                     },
-              isLoading: bookingProvider.isCreating,
               isFullWidth: true,
             );
           },
         );
       },
+    );
+  }
+
+  void _navigateToRoomBooking(Room room, Hotel hotel) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => HotelRoomsScreen(
+          hotelId: hotel.id,
+          hotelName: hotel.name,
+          selectedRoom: room,
+        ),
+      ),
     );
   }
 }

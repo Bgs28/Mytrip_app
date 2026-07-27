@@ -13,6 +13,9 @@ import 'views/main_screen.dart';
 import 'views/trips/bus_detail_screen.dart';
 import 'views/trips/train_detail_screen.dart';
 import 'views/trips/hotel_detail_screen.dart';
+import 'views/trips/bus_list_screen.dart';
+import 'views/trips/train_list_screen.dart';
+import 'views/trips/hotel_list_screen.dart';
 import 'views/payments/checkout_screen.dart';
 
 void main() {
@@ -68,6 +71,9 @@ class MyTripApp extends StatelessWidget {
           '/login': (context) => const LoginScreen(),
           '/register': (context) => const RegisterScreen(),
           '/main': (context) => const MainScreen(),
+          '/bus-list': (context) => const BusListScreen(),
+          '/train-list': (context) => const TrainListScreen(),
+          '/hotel-list': (context) => const HotelListScreen(),
         },
       ),
     );

@@ -1,4 +1,4 @@
-// lib/models/train.dart
+// lib/models/train.dart - Tambahkan status
 class Train {
   final int id;
   final String trainName;
@@ -8,6 +8,7 @@ class Train {
   final String arrivalTime;
   final int price;
   final int seat;
+  final String? status; // Tambahkan field status
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -20,6 +21,7 @@ class Train {
     required this.arrivalTime,
     required this.price,
     required this.seat,
+    this.status, // Tambahkan status
     required this.createdAt,
     required this.updatedAt,
   });
@@ -47,6 +49,7 @@ class Train {
       arrivalTime: json['arrival_time'] ?? '',
       price: parseToInt(json['price']),
       seat: parseToInt(json['seat']),
+      status: json['status'] ?? 'active', // Ambil status dari JSON
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at']) ?? DateTime.now()
           : DateTime.now(),
@@ -66,6 +69,7 @@ class Train {
       'arrival_time': arrivalTime,
       'price': price,
       'seat': seat,
+      'status': status,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };

@@ -1,4 +1,5 @@
 // lib/services/e_ticket_service.dart
+import 'dart:convert';
 import '../models/e_ticket.dart';
 import '../models/api_response.dart';
 import 'api_service.dart';

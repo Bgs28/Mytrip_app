@@ -41,6 +41,7 @@ class _BusListScreenState extends State<BusListScreen> {
       appBar: AppBar(
         title: const Text('Daftar Bus'),
         backgroundColor: AppTheme.white,
+        foregroundColor: AppTheme.black,
         elevation: 0,
         actions: [
           IconButton(

@@ -6,32 +6,61 @@ use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
+
 
 class BookingController extends Controller
 {
     // User membuat booking dari Flutter
     public function store(Request $request)
     {
-        $request->validate([
-            'type'        => 'required|in:bus,train,hotel',
-            'item_id'     => 'required',
-            'total_price' => 'required|numeric',
-        ]);
+        try {
+            Log::info('Booking store request', $request->all());
 
-        $booking = Booking::create([
-            'user_id'      => $request->user()->id, // FIX: Menggunakan property id, bukan method id()
-            'type'         => $request->type,
-            'item_id'      => $request->item_id,
-            'booking_code' => 'MYT-' . strtoupper(Str::random(8)),
-            'total_price'  => $request->total_price,
-            'status'       => 'pending',
-        ]);
+            $validator = Validator::make($request->all(), [
+                'type' => 'required|in:bus,train,hotel',
+                'item_id' => 'required|integer',
+                'total_price' => 'required|numeric|min:0',
+                'notes' => 'nullable|string'
+            ]);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Booking berhasil dibuat',
-            'data'    => $booking
-        ], 201);
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validasi gagal',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            // Cek apakah booking sudah ada untuk item ini (untuk mencegah double booking)
+            // TODO: Tambahkan validasi sesuai jenis (bus/train/hotel)
+
+            $booking = Booking::create([
+                'user_id' => $request->user()->id,
+                'type' => $request->type,
+                'item_id' => $request->item_id,
+                'booking_code' => 'MYT-' . strtoupper(Str::random(8)),
+                'total_price' => $request->total_price,
+                'status' => 'pending',
+                'notes' => $request->notes
+            ]);
+
+            Log::info('Booking created', ['booking_id' => $booking->id]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Booking berhasil dibuat. Silahkan lanjutkan ke pembayaran.',
+                'data' => $booking
+            ], 201);
+
+        } catch (\Exception $e) {
+            Log::error('Booking creation error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     // Riwayat (History) booking milik user yang sedang login

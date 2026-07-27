@@ -1,6 +1,7 @@
 // lib/models/booking.dart - Perbaiki parsing totalPrice dan discountAmount
 
 import 'user.dart';
+import 'payment.dart';
 
 class Booking {
   final int id;
@@ -11,9 +12,11 @@ class Booking {
   final int totalPrice;
   final int discountAmount;
   final String status;
+  final String? notes;
   final DateTime createdAt;
   final DateTime updatedAt;
   final User? user;
+  final Payment? payment; // Tambahkan relasi payment
 
   Booking({
     required this.id,
@@ -24,9 +27,11 @@ class Booking {
     required this.totalPrice,
     this.discountAmount = 0,
     required this.status,
+    this.notes,
     required this.createdAt,
     required this.updatedAt,
     this.user,
+    this.payment,
   });
 
   factory Booking.fromJson(Map<String, dynamic> json) {
@@ -36,7 +41,6 @@ class Booking {
       if (value is int) return value;
       if (value is double) return value.toInt();
       if (value is String) {
-        // Hapus titik, koma, dan karakter non-digit
         final cleaned = value.replaceAll(RegExp(r'[^0-9]'), '');
         if (cleaned.isEmpty) return 0;
         return int.tryParse(cleaned) ?? 0;
@@ -67,6 +71,7 @@ class Booking {
       totalPrice: parseToInt(json['total_price']),
       discountAmount: parseToInt(json['discount_amount'] ?? 0),
       status: json['status'] ?? 'pending',
+      notes: json['notes'],
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at']) ?? DateTime.now()
           : DateTime.now(),
@@ -74,6 +79,9 @@ class Booking {
           ? DateTime.tryParse(json['updated_at']) ?? DateTime.now()
           : DateTime.now(),
       user: json['user'] != null ? User.fromJson(json['user']) : null,
+      payment: json['payment'] != null
+          ? Payment.fromJson(json['payment'])
+          : null,
     );
   }
 

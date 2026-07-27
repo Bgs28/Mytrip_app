@@ -6,74 +6,68 @@ use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Models\Booking;
 use App\Models\Promo;
-use App\Models\ETicket;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
-use Endroid\QrCode\QrCode;
-use Endroid\QrCode\Writer\PngWriter;
-use Endroid\QrCode\Encoding\Encoding;
-use Endroid\QrCode\ErrorCorrectionLevel;
-use Endroid\QrCode\RoundBlockSizeMode;
-use Endroid\QrCode\Builder\Builder;
 
 class PaymentController extends Controller
 {
-    // Create payment from booking - PASTIKAN INI BEKERJA
+    /**
+     * Create payment for booking
+     */
     public function store(Request $request)
     {
         try {
-            Log::info('Payment store called', $request->all());
-            
-            $request->validate([
+            Log::info('Payment store request', $request->all());
+
+            $validator = Validator::make($request->all(), [
                 'booking_id' => 'required|exists:bookings,id',
                 'payment_method' => 'required|in:bank_transfer_bca,bank_transfer_mandiri,bank_transfer_bni,ovo,gopay',
+                'promo_code' => 'nullable|string|exists:promos,code',
+                'notes' => 'nullable|string'
             ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validasi gagal',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
 
             $booking = Booking::with('user')->find($request->booking_id);
 
-            if (!$booking) {
+            // Cek apakah booking milik user
+            if ($booking->user_id != $request->user()->id) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Booking tidak ditemukan'
                 ], 404);
             }
 
-            // Check if booking belongs to user
-            if ($booking->user_id != $request->user()->id) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Unauthorized'
-                ], 403);
-            }
-
-            // Check if payment already exists
+            // Cek apakah payment sudah ada
             $existingPayment = Payment::where('booking_id', $booking->id)->first();
             if ($existingPayment) {
                 return response()->json([
                     'success' => true,
                     'message' => 'Pembayaran sudah ada',
                     'data' => $existingPayment
-                ], 200);
+                ]);
             }
 
             $baseAmount = $booking->total_price;
             $discountAmount = 0;
             $promoId = null;
 
-            // Apply promo if exists
-            if ($request->has('promo_code') && $request->promo_code) {
+            // Apply promo jika ada
+            if ($request->has('promo_code')) {
                 $promo = Promo::where('code', $request->promo_code)->first();
                 if ($promo && $promo->isValid($baseAmount)) {
                     $discountAmount = $promo->calculateDiscount($baseAmount);
                     $promoId = $promo->id;
                     $promo->increment('usage_count');
                 }
-
-                Log::info('Promo applied', [
-                        'promo_id' => $promoId,
-                        'discount_amount' => $discountAmount
-                    ]);
             }
 
             $totalAmount = $baseAmount - $discountAmount;
@@ -92,19 +86,19 @@ class PaymentController extends Controller
                 'notes' => $request->notes
             ]);
 
-            // Update booking with promo info
+            // Update booking dengan promo
             $booking->update([
                 'promo_id' => $promoId,
                 'discount_amount' => $discountAmount
             ]);
 
-            Log::info('Payment created successfully', ['payment_id' => $payment->id]);
+            Log::info('Payment created', ['payment_id' => $payment->id, 'booking_id' => $booking->id]);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Pembayaran berhasil dibuat',
-                'data' => $payment->load('booking')
-            ], 201);
+                'message' => 'Pembayaran berhasil dibuat. Silahkan upload bukti pembayaran.',
+                'data' => $payment
+            ]);
 
         } catch (\Exception $e) {
             Log::error('Payment creation error: ' . $e->getMessage());
@@ -115,37 +109,42 @@ class PaymentController extends Controller
         }
     }
 
-    // Upload proof of payment - FIX
+    /**
+     * Upload proof of payment
+     */
     public function uploadProof(Request $request, $id)
     {
         try {
-            Log::info('Upload proof called for payment ID: ' . $id);
-            
-            $request->validate([
-                'proof_of_payment' => 'required|image|max:2048'
+            Log::info('Upload proof request', ['payment_id' => $id]);
+
+            $validator = Validator::make($request->all(), [
+                'proof_of_payment' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048'
             ]);
 
-            // Cari payment dengan relasi booking
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validasi gagal',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
             $payment = Payment::with('booking')->find($id);
 
             if (!$payment) {
-                Log::error('Payment not found: ' . $id);
                 return response()->json([
                     'success' => false,
                     'message' => 'Pembayaran tidak ditemukan'
                 ], 404);
             }
 
-            // Check if payment belongs to user
             if ($payment->user_id != $request->user()->id) {
-                Log::error('Unauthorized: user ' . $request->user()->id . ' trying to access payment ' . $id);
                 return response()->json([
                     'success' => false,
                     'message' => 'Unauthorized'
                 ], 403);
             }
 
-            // Check if payment already paid
             if ($payment->status == 'paid') {
                 return response()->json([
                     'success' => false,
@@ -156,37 +155,22 @@ class PaymentController extends Controller
             // Upload file
             if ($request->hasFile('proof_of_payment')) {
                 $file = $request->file('proof_of_payment');
-                
-                // Validasi file
-                if (!$file->isValid()) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'File tidak valid'
-                    ], 400);
-                }
+                $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                $path = $file->storeAs('payments', $filename, 'public');
 
-                $filename = time() . '_' . $file->getClientOriginalName();
-                $path = $file->storeAs('payment_proofs', $filename, 'public');
-                
-                Log::info('File uploaded to: ' . $path);
-                
-                // UPDATE: Status tetap pending, hanya simpan bukti pembayaran
+                // Update payment dengan bukti (status tetap pending)
                 $payment->update([
-                    'proof_of_payment' => $path,
-                    // 'status' => 'paid',
-                    // 'paid_at' => now()
+                    'proof_of_payment' => $filename,
+                    'status' => 'pending' // tetap pending sampai di-approve admin
                 ]);
 
-                // Update booking status - untuk sekarang tetap pending dahulu
-                // if ($payment->booking) {
-                //     $payment->booking->update(['status' => 'paid']);
-                // }
+                Log::info('Proof uploaded', ['payment_id' => $payment->id, 'filename' => $filename]);
 
                 return response()->json([
                     'success' => true,
-                    'message' => 'Bukti pembayaran berhasil diunggah',
-                    'data' => $payment->fresh(['booking'])
-                ], 200);
+                    'message' => 'Bukti pembayaran berhasil diupload. Menunggu verifikasi admin.',
+                    'data' => $payment
+                ]);
             }
 
             return response()->json([
@@ -203,11 +187,13 @@ class PaymentController extends Controller
         }
     }
 
-    // Get payment detail
+    /**
+     * Get payment detail
+     */
     public function show(Request $request, $id)
     {
         try {
-            $payment = Payment::with(['booking', 'promo', 'user'])
+            $payment = Payment::with(['booking', 'promo'])
                 ->where('user_id', $request->user()->id)
                 ->find($id);
 
@@ -223,6 +209,7 @@ class PaymentController extends Controller
                 'message' => 'Detail pembayaran berhasil diambil',
                 'data' => $payment
             ]);
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -231,126 +218,29 @@ class PaymentController extends Controller
         }
     }
 
-    // Get payment history
+    /**
+     * Get payment history for user - FIX
+     */
     public function history(Request $request)
     {
         try {
+            Log::info('Payment history request', ['user_id' => $request->user()->id]);
+
+            // Ambil semua payment user
             $payments = Payment::with(['booking', 'promo'])
                 ->where('user_id', $request->user()->id)
-                ->latest()
+                ->orderBy('created_at', 'desc')
                 ->get();
 
+            // Jika tidak ada data, return empty array (bukan 404)
             return response()->json([
                 'success' => true,
                 'message' => 'Riwayat pembayaran berhasil diambil',
                 'data' => $payments
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-    
-    
-    // Tambahkan method untuk admin approve payment
-    public function approvePayment(Request $request, $id)
-    {
-    try {
-        // Cek apakah user adalah admin
-        if ($request->user()->role !== 'admin') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthorized. Hanya admin yang dapat mengakses.'
-            ], 403);
-        }
-
-        $payment = Payment::with('booking')->find($id);
-
-        if (!$payment) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Pembayaran tidak ditemukan'
-            ], 404);
-        }
-
-        if (!$payment->proof_of_payment) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Belum ada bukti pembayaran yang diunggah'
-            ], 400);
-        }
-
-        if ($payment->status == 'paid') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Pembayaran sudah di-approve sebelumnya'
-            ], 400);
-        }
-
-        // Approve payment
-        $payment->update([
-            'status' => 'paid',
-            'paid_at' => now()
-        ]);
-
-        // Update booking status
-        if ($payment->booking) {
-            $payment->booking->update([
-                'status' => 'paid'
-            ]);
-
-            // GENERATE E-TICKET
-            $eTicket = $this->generateETicket($payment->booking);
-        }
-
-        Log::info('Payment approved by admin', [
-            'payment_id' => $payment->id,
-            'booking_id' => $payment->booking_id,
-            'e_ticket_id' => $eTicket->id ?? null
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Pembayaran berhasil di-approve',
-            'data' => [
-                'payment' => $payment->fresh(['booking']),
-                'e_ticket' => $eTicket ?? null
-            ]
-        ], 200);
-
-    } catch (\Exception $e) {
-        Log::error('Approve payment error: ' . $e->getMessage());
-        return response()->json([
-            'success' => false,
-            'message' => 'Terjadi kesalahan: ' . $e->getMessage()
-        ], 500);
-    }
-    }
-
-    // Tambahkan method untuk admin melihat semua payment
-    public function adminIndex(Request $request)
-    {
-        try {
-            // Cek apakah user adalah admin
-            if ($request->user()->role !== 'admin') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Unauthorized. Hanya admin yang dapat mengakses.'
-                ], 403);
-            }
-
-            $payments = Payment::with(['booking', 'user', 'promo'])
-                ->orderBy('created_at', 'desc')
-                ->get();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Data pembayaran berhasil diambil',
-                'data' => $payments
             ], 200);
+
         } catch (\Exception $e) {
+            Log::error('Payment history error: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Terjadi kesalahan: ' . $e->getMessage()
@@ -358,20 +248,16 @@ class PaymentController extends Controller
         }
     }
 
-    // Tambahkan method untuk admin melihat detail payment
-    public function adminShow(Request $request, $id)
+    /**
+     * Get payment by booking ID
+     */
+    public function getByBooking(Request $request, $bookingId)
     {
         try {
-            // Cek apakah user adalah admin
-            if ($request->user()->role !== 'admin') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Unauthorized. Hanya admin yang dapat mengakses.'
-                ], 403);
-            }
-
-            $payment = Payment::with(['booking', 'booking.user', 'promo', 'user'])
-                ->find($id);
+            $payment = Payment::with(['booking', 'promo'])
+                ->where('user_id', $request->user()->id)
+                ->where('booking_id', $bookingId)
+                ->first();
 
             if (!$payment) {
                 return response()->json([
@@ -384,58 +270,13 @@ class PaymentController extends Controller
                 'success' => true,
                 'message' => 'Detail pembayaran berhasil diambil',
                 'data' => $payment
-                ], 200);
-                } catch (\Exception $e) {
+            ]);
+
+        } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Terjadi kesalahan: ' . $e->getMessage()
             ], 500);
         }
-    }
-
-    // Generate E-Ticket
-private function generateETicket($booking)
-    {
-        // Cek apakah sudah ada e-ticket
-        $existingTicket = ETicket::where('booking_id', $booking->id)->first();
-        if ($existingTicket) {
-            return $existingTicket;
-        }
-
-        // Generate ticket code
-        $ticketCode = ETicket::generateTicketCode();
-        $checkInCode = ETicket::generateCheckInCode();
-
-        // Data untuk QR Code
-        $qrData = json_encode([
-            'ticket_code' => $ticketCode,
-            'booking_code' => $booking->booking_code,
-            'check_in_code' => $checkInCode,
-            'type' => $booking->type,
-            'item_id' => $booking->item_id,
-            'user_id' => $booking->user_id,
-            'valid_until' => now()->addDays(30)->toIso8601String()
-        ]);
-
-        // Generate QR Code menggunakan endroid/qr-code
-        $qrCodeUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' . urlencode($qrData);
-    
-    // Download QR Code image
-    $qrCodeImage = file_get_contents($qrCodeUrl);
-    $qrCodeBase64 = base64_encode($qrCodeImage);
-
-    // Create E-Ticket
-    $eTicket = ETicket::create([
-        'booking_id' => $booking->id,
-        'user_id' => $booking->user_id,
-        'ticket_code' => $ticketCode,
-        'qr_code' => $qrCodeBase64,
-        'valid_from' => now(),
-        'valid_until' => now()->addDays(30),
-        'is_used' => false,
-        'check_in_code' => $checkInCode
-    ]);
-
-    return $eTicket;
     }
 }
