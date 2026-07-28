@@ -48,6 +48,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/trains/{id}', [TrainController::class, 'show']);
     Route::get('/hotels/{id}', [HotelController::class, 'show']);
 
+    // BUS Schedules & Seats - TAMBAHKAN INI
+    Route::get('/buses/{id}/schedules', [BusController::class, 'getSchedules']);
+    Route::get('/buses/{id}/seats', [BusController::class, 'getSeats']);
+    Route::post('/buses/{id}/book', [BusController::class, 'bookSeats']);
+
+    // TRAIN Schedules & Seats - TAMBAHKAN INI
+    Route::get('/trains/{id}/schedules', [TrainController::class, 'getSchedules']);
+    Route::get('/trains/{id}/seats', [TrainController::class, 'getSeats']);
+    Route::post('/trains/{id}/book', [TrainController::class, 'bookSeats']);
+
     // B. Halaman Profil User
     Route::get('/user', function (Request $request) {
         return response()->json([

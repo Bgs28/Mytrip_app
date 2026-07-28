@@ -1,4 +1,3 @@
-{{-- resources/views/admin/layouts/admin.blade.php --}}
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -12,14 +11,14 @@
 <body class="bg-gray-50">
     <div class="flex min-h-screen">
         <!-- Sidebar -->
-        @include('admin.layouts.partials.sidebar')
+        @include('admin.layouts/partials.sidebar')
 
         <!-- Main Content -->
-        <div class="flex-1 md:ml-64 min-h-screen">
+        <div class="flex-1 min-h-screen md:ml-64">
             <!-- Header -->
             <header class="bg-white border-b border-gray-200 sticky top-0 z-30">
-                <div class="flex items-center justify-between px-6 py-4">
-                    <div class="flex items-center gap-4">
+                <div class="flex items-center justify-between px-4 py-3 md:px-6 md:py-4">
+                    <div class="flex items-center gap-3">
                         <button id="openSidebar" class="md:hidden text-gray-600 hover:text-gray-900">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
@@ -27,7 +26,7 @@
                         </button>
                         <h2 class="text-lg font-semibold text-gray-700">@yield('title', 'Dashboard')</h2>
                     </div>
-                    <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-3">
                         <span class="text-sm text-gray-600 hidden sm:inline">{{ Auth::user()->name ?? 'Admin' }}</span>
                         <form action="{{ route('admin.logout') }}" method="POST" class="inline">
                             @csrf
@@ -40,7 +39,7 @@
             </header>
 
             <!-- Content -->
-            <main class="p-6">
+            <main class="p-4 md:p-6">
                 @yield('content')
             </main>
         </div>

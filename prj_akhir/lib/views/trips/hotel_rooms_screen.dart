@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/room_service.dart';
 import '../../models/room.dart';
-import '../../models/hotel.dart';
 import '../../utils/theme.dart';
 import '../../utils/helpers.dart';
 import '../../widgets/loading_widget.dart';
@@ -30,6 +29,7 @@ class HotelRoomsScreen extends StatefulWidget {
 
 class _HotelRoomsScreenState extends State<HotelRoomsScreen> {
   final RoomService _roomService = RoomService();
+  final TextEditingController _guestController = TextEditingController();
   List<Room> _rooms = [];
   bool _isLoading = true;
   String? _error;
@@ -43,7 +43,14 @@ class _HotelRoomsScreenState extends State<HotelRoomsScreen> {
   void initState() {
     super.initState();
     _selectedRoom = widget.selectedRoom;
+    _guestController.text = _guestsCount.toString();
     _loadRooms();
+  }
+
+  @override
+  void dispose() {
+    _guestController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadRooms() async {
@@ -74,12 +81,25 @@ class _HotelRoomsScreenState extends State<HotelRoomsScreen> {
         title: Text('Pilih Kamar - ${widget.hotelName}'),
         backgroundColor: AppTheme.white,
         elevation: 0,
+        leading: IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.arrow_back_ios),
+        ),
       ),
       body: _isLoading
           ? const LoadingWidget()
           : _error != null
           ? ErrorWidgetCustom(message: _error!, onRetry: _loadRooms)
-          : Column(children: [_buildDateSelection(), _buildRoomList()]),
+          : Column(
+              children: [
+                _buildDateSelection(),
+                Expanded(child: _buildRoomList()),
+                if (_selectedRoom != null &&
+                    _checkInDate != null &&
+                    _checkOutDate != null)
+                  _buildBottomBar(),
+              ],
+            ),
     );
   }
 
@@ -118,21 +138,67 @@ class _HotelRoomsScreenState extends State<HotelRoomsScreen> {
           Row(
             children: [
               Expanded(
-                child: CustomTextField(
-                  label: 'Jumlah Tamu',
-                  hint: 'Jumlah tamu',
-                  keyboardType: TextInputType.number,
-                  controller: TextEditingController(
-                    text: _guestsCount.toString(),
-                  ),
-                  onChanged: (value) {
-                    final intVal = int.tryParse(value);
-                    if (intVal != null && intVal > 0) {
-                      setState(() {
-                        _guestsCount = intVal;
-                      });
-                    }
-                  },
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Jumlah Tamu', style: AppTheme.bodySmall),
+                    const SizedBox(height: 4),
+                    Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(color: AppTheme.lightGrey),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          IconButton(
+                            onPressed: () {
+                              if (_guestsCount > 1) {
+                                setState(() {
+                                  _guestsCount--;
+                                  _guestController.text = _guestsCount
+                                      .toString();
+                                });
+                              }
+                            },
+                            icon: const Icon(Icons.remove, size: 18),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                          SizedBox(
+                            width: 40,
+                            child: TextField(
+                              controller: _guestController,
+                              textAlign: TextAlign.center,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                border: InputBorder.none,
+                                isDense: true,
+                              ),
+                              onChanged: (value) {
+                                final intVal = int.tryParse(value);
+                                if (intVal != null && intVal > 0) {
+                                  setState(() {
+                                    _guestsCount = intVal;
+                                  });
+                                }
+                              },
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () {
+                              setState(() {
+                                _guestsCount++;
+                                _guestController.text = _guestsCount.toString();
+                              });
+                            },
+                            icon: const Icon(Icons.add, size: 18),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(width: 12),
@@ -141,15 +207,15 @@ class _HotelRoomsScreenState extends State<HotelRoomsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text('Malam', style: AppTheme.bodySmall),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 4),
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
-                        vertical: 14,
+                        vertical: 12,
                       ),
                       decoration: BoxDecoration(
                         color: AppTheme.primaryLightestBlue,
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         _checkInDate != null && _checkOutDate != null
@@ -182,26 +248,39 @@ class _HotelRoomsScreenState extends State<HotelRoomsScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          border: Border.all(color: AppTheme.lightGrey),
+          border: Border.all(
+            color: date != null ? AppTheme.primaryBlue : AppTheme.lightGrey,
+            width: date != null ? 2 : 1,
+          ),
           borderRadius: BorderRadius.circular(8),
+          color: date != null ? AppTheme.primaryLightestBlue : Colors.white,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: AppTheme.bodySmall),
-            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                color: date != null ? AppTheme.primaryBlue : AppTheme.grey,
+                fontWeight: date != null ? FontWeight.w600 : FontWeight.normal,
+              ),
+            ),
+            const SizedBox(height: 2),
             Row(
               children: [
                 Icon(
                   Icons.calendar_today,
-                  size: 16,
-                  color: AppTheme.primaryBlue,
+                  size: 14,
+                  color: date != null ? AppTheme.primaryBlue : AppTheme.grey,
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
                 Text(
-                  date != null ? AppHelpers.formatDate(date) : 'Pilih tanggal',
+                  date != null
+                      ? '${date.day}/${date.month}/${date.year}'
+                      : 'Pilih tanggal',
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 13,
                     fontWeight: date != null
                         ? FontWeight.w600
                         : FontWeight.normal,
@@ -231,14 +310,14 @@ class _HotelRoomsScreenState extends State<HotelRoomsScreen> {
         return Theme(
           data: ThemeData.light().copyWith(
             primaryColor: AppTheme.primaryBlue,
-            colorScheme: ColorScheme.light(primary: AppTheme.primaryBlue),
+            colorScheme: const ColorScheme.light(primary: AppTheme.primaryBlue),
           ),
           child: child!,
         );
       },
     );
 
-    if (picked != null) {
+    if (picked != null && mounted) {
       setState(() {
         if (isCheckIn) {
           _checkInDate = picked;
@@ -263,36 +342,39 @@ class _HotelRoomsScreenState extends State<HotelRoomsScreen> {
   Widget _buildRoomList() {
     final availableRooms = _rooms.where((room) => room.isAvailable).toList();
 
-    return Expanded(
-      child: availableRooms.isEmpty
-          ? const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.hotel, size: 64, color: AppTheme.grey),
-                  SizedBox(height: 16),
-                  Text('Tidak ada kamar tersedia', style: AppTheme.heading3),
-                  SizedBox(height: 8),
-                  Text('Silahkan cek hotel lain', style: AppTheme.bodyMedium),
-                ],
-              ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: availableRooms.length,
-              itemBuilder: (context, index) {
-                final room = availableRooms[index];
-                final isSelected = _selectedRoom?.id == room.id;
-                return _buildRoomItem(room, isSelected);
-              },
-            ),
+    if (availableRooms.isEmpty) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.hotel, size: 64, color: AppTheme.grey),
+            SizedBox(height: 16),
+            Text('Tidak ada kamar tersedia', style: AppTheme.heading3),
+            SizedBox(height: 8),
+            Text('Silahkan cek hotel lain', style: AppTheme.bodyMedium),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: availableRooms.length,
+      itemBuilder: (context, index) {
+        final room = availableRooms[index];
+        final isSelected = _selectedRoom?.id == room.id;
+        return _buildRoomItem(room, isSelected);
+      },
     );
   }
 
   Widget _buildRoomItem(Room room, bool isSelected) {
     final isAvailable = _checkInDate != null && _checkOutDate != null;
+    final nights = isAvailable
+        ? _checkOutDate!.difference(_checkInDate!).inDays
+        : 0;
     final totalPrice = isAvailable
-        ? room.pricePerNight * _checkOutDate!.difference(_checkInDate!).inDays
+        ? room.pricePerNight * nights
         : room.pricePerNight;
 
     return Card(
@@ -396,14 +478,14 @@ class _HotelRoomsScreenState extends State<HotelRoomsScreen> {
                           color: AppTheme.primaryBlue,
                         ),
                       ),
-                      if (isAvailable) ...[
-                        const Text(
-                          ' / malam',
-                          style: TextStyle(fontSize: 12, color: AppTheme.grey),
-                        ),
+                      const Text(
+                        ' / malam',
+                        style: TextStyle(fontSize: 12, color: AppTheme.grey),
+                      ),
+                      if (isAvailable && nights > 0) ...[
                         const SizedBox(width: 8),
                         Text(
-                          '• ${_checkOutDate!.difference(_checkInDate!).inDays} malam',
+                          '• $nights malam',
                           style: const TextStyle(
                             fontSize: 12,
                             color: AppTheme.grey,
@@ -412,7 +494,7 @@ class _HotelRoomsScreenState extends State<HotelRoomsScreen> {
                       ],
                     ],
                   ),
-                  if (isAvailable) ...[
+                  if (isAvailable && nights > 0) ...[
                     const SizedBox(height: 4),
                     Text(
                       'Total: ${AppHelpers.formatCurrency(totalPrice.toDouble())}',
@@ -435,39 +517,38 @@ class _HotelRoomsScreenState extends State<HotelRoomsScreen> {
                     size: 28,
                   ),
                 const SizedBox(height: 8),
-                if (isAvailable)
-                  ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        _selectedRoom = room;
-                      });
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isSelected
-                          ? AppTheme.primaryBlue
-                          : AppTheme.white,
-                      foregroundColor: isSelected
-                          ? AppTheme.white
-                          : AppTheme.primaryBlue,
-                      side: BorderSide(color: AppTheme.primaryBlue),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
+                ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      _selectedRoom = room;
+                    });
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isSelected
+                        ? AppTheme.primaryBlue
+                        : AppTheme.white,
+                    foregroundColor: isSelected
+                        ? AppTheme.white
+                        : AppTheme.primaryBlue,
+                    side: BorderSide(color: AppTheme.primaryBlue),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Text(
-                      isSelected ? 'Dipilih' : 'Pilih',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: isSelected
-                            ? FontWeight.w600
-                            : FontWeight.normal,
-                      ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
                     ),
                   ),
+                  child: Text(
+                    isSelected ? 'Dipilih' : 'Pilih',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: isSelected
+                          ? FontWeight.w600
+                          : FontWeight.normal,
+                    ),
+                  ),
+                ),
               ],
             ),
           ],
@@ -476,30 +557,58 @@ class _HotelRoomsScreenState extends State<HotelRoomsScreen> {
     );
   }
 
-  // Navigate to Checkout
-  void _navigateToCheckout() {
-    if (_selectedRoom == null) {
-      AppHelpers.showSnackBar(
-        context,
-        'Silahkan pilih kamar terlebih dahulu',
-        isError: true,
-      );
-      return;
-    }
+  Widget _buildBottomBar() {
+    final nights = _checkOutDate!.difference(_checkInDate!).inDays;
+    final totalPrice = _selectedRoom!.pricePerNight * nights;
 
-    if (_checkInDate == null || _checkOutDate == null) {
-      AppHelpers.showSnackBar(
-        context,
-        'Silahkan pilih tanggal check-in dan check-out',
-        isError: true,
-      );
-      return;
-    }
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Total Harga', style: AppTheme.bodySmall),
+                Text(
+                  AppHelpers.formatCurrency(totalPrice.toDouble()),
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.primaryBlue,
+                  ),
+                ),
+                Text(
+                  '${_selectedRoom!.roomName} • $nights malam',
+                  style: AppTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
+          CustomButton(
+            text: 'Lanjut ke Pembayaran',
+            onPressed: () => _navigateToCheckout(totalPrice),
+            isFullWidth: false,
+            width: 160,
+            height: 45,
+          ),
+        ],
+      ),
+    );
+  }
 
-    final totalPrice =
-        _selectedRoom!.pricePerNight *
-        _checkOutDate!.difference(_checkInDate!).inDays;
-
+  void _navigateToCheckout(int totalPrice) {
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -514,6 +623,8 @@ class _HotelRoomsScreenState extends State<HotelRoomsScreen> {
             'checkIn': _checkInDate!.toIso8601String(),
             'checkOut': _checkOutDate!.toIso8601String(),
             'guestsCount': _guestsCount,
+            'roomType': _selectedRoom!.roomTypeLabel,
+            'capacity': _selectedRoom!.capacity,
           },
         ),
       ),
