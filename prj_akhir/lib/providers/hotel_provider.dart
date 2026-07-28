@@ -26,10 +26,17 @@ class HotelProvider extends ChangeNotifier {
     _setLoading(true);
     _error = null;
 
+    // Reset search state saat refresh tanpa query
+    if (refresh && search == null) {
+      _searchQuery = '';
+    }
+
+    final effectiveSearch = (search ?? _searchQuery).isNotEmpty
+        ? (search ?? _searchQuery)
+        : null;
+
     try {
-      final response = await _hotelService.getHotels(
-        search: search ?? _searchQuery,
-      );
+      final response = await _hotelService.getHotels(search: effectiveSearch);
 
       if (response.success && response.data != null) {
         _hotels = response.data!;
@@ -53,7 +60,9 @@ class HotelProvider extends ChangeNotifier {
     _searchQuery = query;
 
     try {
-      final response = await _hotelService.getHotels(search: query);
+      final response = await _hotelService.getHotels(
+        search: query.isNotEmpty ? query : null,
+      );
 
       if (response.success && response.data != null) {
         _hotels = response.data!;

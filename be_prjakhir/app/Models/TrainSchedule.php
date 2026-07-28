@@ -20,7 +20,7 @@ class TrainSchedule extends Model
         'departure_date' => 'date',
         'departure_time' => 'datetime:H:i',
         'arrival_time' => 'datetime:H:i',
-        'price' => 'decimal:2'
+        'price' => 'integer'
     ];
 
     // Relasi ke Train

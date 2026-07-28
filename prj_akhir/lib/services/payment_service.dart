@@ -71,18 +71,33 @@ class PaymentService {
       // Cek ukuran file
       final size = await proofFile.length();
       debugPrint('📦 File size: $size bytes');
-      if (size > 5 * 1024 * 1024) {
+      if (size > 2 * 1024 * 1024) {
         return ApiResponse<Payment>.error(
-          'Ukuran file terlalu besar (maksimal 5MB)',
+          'Ukuran file terlalu besar (maksimal 2MB)',
         );
+      }
+
+      // Deteksi ekstensi dan content-type dari nama file asli
+      final originalPath = proofFile.path.toLowerCase();
+      String ext;
+      String mimeType;
+      if (originalPath.endsWith('.png')) {
+        ext = 'png';
+        mimeType = 'image/png';
+      } else if (originalPath.endsWith('.gif')) {
+        ext = 'gif';
+        mimeType = 'image/gif';
+      } else {
+        ext = 'jpg';
+        mimeType = 'image/jpeg';
       }
 
       // Untuk semua platform, kita gunakan MultipartFile
       final bytes = await proofFile.readAsBytes();
       final multipartFile = MultipartFile.fromBytes(
         bytes,
-        filename: 'proof_${DateTime.now().millisecondsSinceEpoch}.jpg',
-        contentType: DioMediaType.parse('image/jpeg'),
+        filename: 'proof_${DateTime.now().millisecondsSinceEpoch}.$ext',
+        contentType: DioMediaType.parse(mimeType),
       );
 
       final formData = FormData.fromMap({'proof_of_payment': multipartFile});

@@ -127,6 +127,12 @@ class BookingProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Set selected booking langsung dari Map (digunakan setelah bookSeats)
+  void setSelectedBookingFromMap(Map<String, dynamic> bookingMap) {
+    _selectedBooking = Booking.fromJson(bookingMap);
+    notifyListeners();
+  }
+
   void _setLoading(bool loading) {
     _isLoading = loading;
     notifyListeners();

@@ -221,17 +221,26 @@ class TrainService {
     required int scheduleId,
     required List<int> seatIds,
     required String? notes,
+    int? bookingId,
   }) async {
     try {
       print('📤 Booking train seats:');
       print('   trainId: $trainId');
       print('   scheduleId: $scheduleId');
       print('   seatIds: $seatIds');
+      print('   bookingId: $bookingId');
       print('   notes: $notes');
+
+      final data = <String, dynamic>{
+        'schedule_id': scheduleId,
+        'seat_ids': seatIds,
+        'notes': notes,
+      };
+      if (bookingId != null) data['booking_id'] = bookingId;
 
       final response = await _apiService.post(
         '${AppConstants.baseUrl}${AppConstants.trainsEndpoint}/$trainId/book',
-        data: {'schedule_id': scheduleId, 'seat_ids': seatIds, 'notes': notes},
+        data: data,
       );
 
       print('📥 Response: ${response.success}');

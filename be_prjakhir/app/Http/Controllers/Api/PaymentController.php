@@ -156,12 +156,13 @@ class PaymentController extends Controller
             if ($request->hasFile('proof_of_payment')) {
                 $file = $request->file('proof_of_payment');
                 $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
-                $path = $file->storeAs('payments', $filename, 'public');
+                // Simpan di storage/payments/ (tanpa subfolder)
+                $file->storeAs('payments', $filename, 'public');
 
                 // Update payment dengan bukti (status tetap pending)
                 $payment->update([
                     'proof_of_payment' => $filename,
-                    'status' => 'pending' // tetap pending sampai di-approve admin
+                    'status' => 'pending'
                 ]);
 
                 Log::info('Proof uploaded', ['payment_id' => $payment->id, 'filename' => $filename]);

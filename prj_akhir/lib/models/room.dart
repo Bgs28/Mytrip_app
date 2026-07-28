@@ -1,4 +1,5 @@
 // lib/models/room.dart
+import '../utils/constants.dart';
 class Room {
   final int id;
   final int hotelId;
@@ -49,7 +50,9 @@ class Room {
       facilities: json['facilities'] != null
           ? List<String>.from(json['facilities'])
           : null,
-      images: json['images'] != null ? List<String>.from(json['images']) : null,
+      // Gunakan images_url (URL lengkap dari backend) jika ada,
+      // fallback ke images (nama file) yang akan diproses buildStorageUrl
+      images: _parseImages(json),
       isAvailable: json['is_available'] ?? true,
       createdAt: DateTime.parse(
         json['created_at'] ?? DateTime.now().toIso8601String(),
@@ -58,6 +61,26 @@ class Room {
         json['updated_at'] ?? DateTime.now().toIso8601String(),
       ),
     );
+  }
+
+  /// Ambil list URL gambar dari response API.
+  /// Prioritas: images_url (URL lengkap dari backend accessor) → images (nama file)
+  static List<String>? _parseImages(Map<String, dynamic> json) {
+    // Coba pakai images_url yang dikirim backend (sudah URL lengkap)
+    if (json['images_url'] != null) {
+      final list = json['images_url'];
+      if (list is List && list.isNotEmpty) {
+        return List<String>.from(list.where((e) => e != null && e.toString().isNotEmpty));
+      }
+    }
+    // Fallback ke images (nama file)
+    if (json['images'] != null) {
+      final list = json['images'];
+      if (list is List && list.isNotEmpty) {
+        return List<String>.from(list.where((e) => e != null && e.toString().isNotEmpty));
+      }
+    }
+    return null;
   }
 
   String get roomTypeLabel {
@@ -92,5 +115,16 @@ class Room {
       default:
         return bedType;
     }
+  }
+
+  /// URL lengkap gambar kamar dari Laravel storage.
+  /// Jika images sudah berisi URL lengkap (dari backend accessor images_url),
+  /// pakai langsung. Jika masih nama file, bangun URL via AppConstants.
+  List<String> get imageUrls {
+    if (images == null || images!.isEmpty) return [];
+    return images!.map((img) {
+      if (img.startsWith('http')) return img;
+      return AppConstants.buildStorageUrl(img, folder: 'rooms');
+    }).where((url) => url.isNotEmpty).toList();
   }
 }

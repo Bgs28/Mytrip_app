@@ -54,8 +54,18 @@ class _TrainDetailScreenState extends State<TrainDetailScreen> {
       if (mounted) {
         setState(() {
           if (response.success && response.data != null) {
-            _schedules = response.data!;
-            print('✅ Schedules loaded: ${_schedules.length}');
+            final today = DateTime.now();
+            final todayOnly = DateTime(today.year, today.month, today.day);
+
+            _schedules = response.data!.where((s) {
+              final scheduleDate = DateTime(
+                s.departureDate.year,
+                s.departureDate.month,
+                s.departureDate.day,
+              );
+              return !scheduleDate.isBefore(todayOnly);
+            }).toList();
+            print('✅ Schedules loaded (after filter): ${_schedules.length}');
 
             if (_schedules.isNotEmpty) {
               _selectedSchedule = _schedules.firstWhere(

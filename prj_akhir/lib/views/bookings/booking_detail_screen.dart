@@ -396,30 +396,56 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
               ),
             ] else if (booking.status.toLowerCase() == 'pending') ...[
               const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.orange),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.pending, color: Colors.orange),
-                    const SizedBox(width: 8),
-                    const Expanded(
-                      child: Text(
-                        'Menunggu Verifikasi Admin.\n'
-                        'Bukti pembayaran telah terkirim. Mohon tunggu konfirmasi dari admin.',
-                        style: TextStyle(
-                          color: Colors.orange,
-                          fontWeight: FontWeight.w600,
+              if (booking.payment?.hasProof ?? false)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.pending, color: Colors.orange),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Menunggu Verifikasi Admin.\n'
+                          'Bukti pembayaran telah terkirim. Mohon tunggu konfirmasi dari admin.',
+                          style: TextStyle(
+                            color: Colors.orange,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
+                )
+              else
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.error.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppTheme.error),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.upload_file, color: AppTheme.error),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Belum ada bukti pembayaran.\n'
+                          'Silakan upload bukti transfer untuk memproses pesanan Anda.',
+                          style: TextStyle(
+                            color: AppTheme.error,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
             ] else if (booking.status.toLowerCase() == 'cancel') ...[
               const SizedBox(height: 8),
               Container(
@@ -490,11 +516,8 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
         children: [
           if (!hasProof)
             CustomButton(
-              text: '📷 Upload Bukti Pembayaran',
-              onPressed: () {
-                // Scroll ke bagian upload
-                // atau trigger upload
-              },
+              text: _isUploading ? 'Mengupload...' : '📷 Upload Bukti Pembayaran',
+              onPressed: _isUploading ? null : () => _handleUpload(booking),
               isFullWidth: true,
             ),
           const SizedBox(height: 12),
@@ -606,7 +629,12 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
 
   Widget _buildProofSection(Booking booking) {
     final payment = booking.payment;
-    if (payment == null) return const SizedBox.shrink();
+
+    // Jika status cancel atau paid tanpa proof, tidak perlu tampilkan section ini
+    if (booking.status.toLowerCase() == 'cancel') return const SizedBox.shrink();
+    if (booking.status.toLowerCase() == 'paid' && (payment == null || !payment.hasProof)) {
+      return const SizedBox.shrink();
+    }
 
     return Card(
       elevation: 2,
@@ -618,8 +646,8 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
           children: [
             const Text('📷 Bukti Pembayaran', style: AppTheme.heading4),
             const SizedBox(height: 12),
-            if (payment.hasProof) ...[
-              // Tampilkan bukti
+            if (payment != null && payment.hasProof) ...[
+              // Sudah ada bukti — tampilkan gambar
               GestureDetector(
                 onTap: () => _showFullImage(payment.proofUrl),
                 child: Container(
@@ -628,32 +656,59 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: AppTheme.lightGrey),
-                    image: DecorationImage(
-                      image: NetworkImage(payment.proofUrl),
-                      fit: BoxFit.cover,
-                    ),
                   ),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      gradient: LinearGradient(
-                        begin: Alignment.bottomCenter,
-                        end: Alignment.topCenter,
-                        colors: [
-                          Colors.black.withOpacity(0.5),
-                          Colors.transparent,
-                        ],
-                      ),
-                    ),
-                    child: const Align(
-                      alignment: Alignment.bottomCenter,
-                      child: Padding(
-                        padding: EdgeInsets.all(8.0),
-                        child: Text(
-                          'Tap untuk melihat full',
-                          style: TextStyle(color: Colors.white, fontSize: 12),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Image.network(
+                          payment.proofUrl,
+                          fit: BoxFit.cover,
+                          loadingBuilder: (context, child, progress) {
+                            if (progress == null) return child;
+                            return const Center(
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: AppTheme.lightGrey,
+                              child: const Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.broken_image, color: AppTheme.grey, size: 40),
+                                  SizedBox(height: 8),
+                                  Text('Gagal memuat gambar', style: TextStyle(color: AppTheme.grey, fontSize: 12)),
+                                ],
+                              ),
+                            );
+                          },
                         ),
-                      ),
+                        Positioned(
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.bottomCenter,
+                                end: Alignment.topCenter,
+                                colors: [
+                                  Colors.black.withOpacity(0.5),
+                                  Colors.transparent,
+                                ],
+                              ),
+                            ),
+                            child: const Text(
+                              'Tap untuk melihat full',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: Colors.white, fontSize: 12),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -684,8 +739,8 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                     ],
                   ),
                 ),
-            ] else if (booking.status == 'pending') ...[
-              // Belum upload bukti
+            ] else if (booking.status.toLowerCase() == 'pending') ...[
+              // Belum upload bukti (payment null atau belum ada proof)
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -716,21 +771,21 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                       style: AppTheme.bodySmall.copyWith(color: AppTheme.grey),
                     ),
                     const SizedBox(height: 12),
-                    if (!_isUploading)
+                    if (_isUploading)
+                      const SizedBox(
+                        height: 24,
+                        width: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    else
                       ElevatedButton.icon(
-                        onPressed: () => _pickAndUploadProof(payment.id),
+                        onPressed: () => _handleUpload(booking),
                         icon: const Icon(Icons.upload_file),
                         label: const Text('Upload Bukti'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.primaryBlue,
                           foregroundColor: AppTheme.white,
                         ),
-                      )
-                    else
-                      const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
                       ),
                   ],
                 ),
@@ -743,25 +798,121 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
   }
 
   void _showFullImage(String imageUrl) {
+    if (imageUrl.isEmpty) return;
     showDialog(
       context: context,
       builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
+        backgroundColor: Colors.black,
+        insetPadding: EdgeInsets.zero,
         child: GestureDetector(
           onTap: () => Navigator.pop(context),
-          child: Container(
+          child: SizedBox(
             width: double.infinity,
             height: double.infinity,
-            decoration: BoxDecoration(
-              image: DecorationImage(
-                image: NetworkImage(imageUrl),
-                fit: BoxFit.contain,
-              ),
+            child: Image.network(
+              imageUrl,
+              fit: BoxFit.contain,
+              loadingBuilder: (context, child, progress) {
+                if (progress == null) return child;
+                return const Center(
+                  child: CircularProgressIndicator(color: Colors.white),
+                );
+              },
+              errorBuilder: (context, error, stackTrace) {
+                return const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.broken_image, color: Colors.white, size: 64),
+                      SizedBox(height: 12),
+                      Text('Gagal memuat gambar', style: TextStyle(color: Colors.white)),
+                    ],
+                  ),
+                );
+              },
             ),
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _handleUpload(Booking booking) async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 70,
+      );
+
+      if (image == null) return;
+
+      setState(() {
+        _isUploading = true;
+      });
+
+      int? paymentId = booking.payment?.id;
+
+      // Jika payment belum ada, buat payment dulu
+      if (paymentId == null) {
+        final createResponse = await _paymentService.createPayment(
+          bookingId: booking.id,
+          paymentMethod: 'bank_transfer_bca',
+        );
+
+        if (!mounted) return;
+
+        if (!createResponse.success || createResponse.data == null) {
+          setState(() => _isUploading = false);
+          AppHelpers.showSnackBar(
+            context,
+            createResponse.message ?? 'Gagal membuat data pembayaran',
+            isError: true,
+          );
+          return;
+        }
+
+        paymentId = createResponse.data!.id;
+      }
+
+      // Upload bukti
+      final response = await _paymentService.uploadProof(
+        paymentId: paymentId,
+        proofFile: File(image.path),
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _isUploading = false;
+      });
+
+      if (response.success) {
+        AppHelpers.showSnackBar(
+          context,
+          '✅ Bukti pembayaran berhasil diupload! Menunggu verifikasi admin.',
+        );
+        await _loadData();
+      } else {
+        AppHelpers.showSnackBar(
+          context,
+          response.message ?? 'Gagal upload bukti',
+          isError: true,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isUploading = false;
+        });
+        AppHelpers.showSnackBar(
+          context,
+          'Terjadi kesalahan: $e',
+          isError: true,
+        );
+      }
+    }
   }
 
   Future<void> _pickAndUploadProof(int paymentId) async {

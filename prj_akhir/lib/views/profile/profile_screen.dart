@@ -126,7 +126,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: user.avatar != null && user.avatar!.isNotEmpty
                   ? ClipOval(
                       child: Image.network(
-                        user.avatar!,
+                        user.avatarUrl,
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) {
                           return const Icon(

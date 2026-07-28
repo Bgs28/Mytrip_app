@@ -26,14 +26,19 @@ class BusSchedule {
 
   factory BusSchedule.fromJson(Map<String, dynamic> json) {
     // Helper function untuk parse price dengan aman
+    // Menangani format int (5000), double (5000.0), dan string ("5000", "5000.00", "5.000")
     int parsePrice(dynamic value) {
       if (value == null) return 0;
       if (value is int) return value;
-      if (value is double) return value.toInt();
+      if (value is double) return value.round();
       if (value is String) {
-        final cleaned = value.replaceAll(RegExp(r'[^0-9]'), '');
+        // Coba parse langsung dulu (untuk "5000" atau "5000.00")
+        final directDouble = double.tryParse(value);
+        if (directDouble != null) return directDouble.round();
+        // Fallback: hapus karakter non-digit dan non-titik, lalu parse
+        final cleaned = value.replaceAll(RegExp(r'[^0-9.]'), '');
         if (cleaned.isEmpty) return 0;
-        return int.tryParse(cleaned) ?? 0;
+        return double.tryParse(cleaned)?.round() ?? 0;
       }
       return 0;
     }

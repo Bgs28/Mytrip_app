@@ -8,7 +8,6 @@ import '../../utils/helpers.dart';
 import '../../widgets/loading_widget.dart';
 import '../../widgets/error_widget.dart';
 import '../../widgets/custom_button.dart';
-import '../../widgets/custom_textfield.dart';
 import '../payments/checkout_screen.dart';
 
 class HotelRoomsScreen extends StatefulWidget {
@@ -29,27 +28,23 @@ class HotelRoomsScreen extends StatefulWidget {
 
 class _HotelRoomsScreenState extends State<HotelRoomsScreen> {
   final RoomService _roomService = RoomService();
-  final TextEditingController _guestController = TextEditingController();
   List<Room> _rooms = [];
   bool _isLoading = true;
   String? _error;
 
   DateTime? _checkInDate;
   DateTime? _checkOutDate;
-  int _guestsCount = 2;
   Room? _selectedRoom;
 
   @override
   void initState() {
     super.initState();
     _selectedRoom = widget.selectedRoom;
-    _guestController.text = _guestsCount.toString();
     _loadRooms();
   }
 
   @override
   void dispose() {
-    _guestController.dispose();
     super.dispose();
   }
 
@@ -132,100 +127,34 @@ class _HotelRoomsScreenState extends State<HotelRoomsScreen> {
                   onTap: () => _selectDate(context, false),
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
+              const SizedBox(width: 12),
+              // Tampilkan jumlah malam
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryLightestBlue,
+                  borderRadius: BorderRadius.circular(8),
+                ),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Jumlah Tamu', style: AppTheme.bodySmall),
-                    const SizedBox(height: 4),
-                    Container(
-                      decoration: BoxDecoration(
-                        border: Border.all(color: AppTheme.lightGrey),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          IconButton(
-                            onPressed: () {
-                              if (_guestsCount > 1) {
-                                setState(() {
-                                  _guestsCount--;
-                                  _guestController.text = _guestsCount
-                                      .toString();
-                                });
-                              }
-                            },
-                            icon: const Icon(Icons.remove, size: 18),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                          ),
-                          SizedBox(
-                            width: 40,
-                            child: TextField(
-                              controller: _guestController,
-                              textAlign: TextAlign.center,
-                              keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                border: InputBorder.none,
-                                isDense: true,
-                              ),
-                              onChanged: (value) {
-                                final intVal = int.tryParse(value);
-                                if (intVal != null && intVal > 0) {
-                                  setState(() {
-                                    _guestsCount = intVal;
-                                  });
-                                }
-                              },
-                            ),
-                          ),
-                          IconButton(
-                            onPressed: () {
-                              setState(() {
-                                _guestsCount++;
-                                _guestController.text = _guestsCount.toString();
-                              });
-                            },
-                            icon: const Icon(Icons.add, size: 18),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                          ),
-                        ],
+                    Text(
+                      _checkInDate != null && _checkOutDate != null
+                          ? '${_checkOutDate!.difference(_checkInDate!).inDays}'
+                          : '-',
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.primaryBlue,
                       ),
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Malam', style: AppTheme.bodySmall),
-                    const SizedBox(height: 4),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryLightestBlue,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        _checkInDate != null && _checkOutDate != null
-                            ? '${_checkOutDate!.difference(_checkInDate!).inDays} malam'
-                            : '-',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.primaryBlue,
-                        ),
+                    const Text(
+                      'malam',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppTheme.primaryBlue,
                       ),
                     ),
                   ],
@@ -399,12 +328,13 @@ class _HotelRoomsScreenState extends State<HotelRoomsScreen> {
                 borderRadius: BorderRadius.circular(12),
                 image: room.images != null && room.images!.isNotEmpty
                     ? DecorationImage(
-                        image: NetworkImage(room.images![0]),
+                        image: NetworkImage(room.imageUrls.first),
                         fit: BoxFit.cover,
+                        onError: (_, __) {},
                       )
                     : null,
               ),
-              child: room.images == null || room.images!.isEmpty
+              child: room.imageUrls.isEmpty
                   ? const Icon(
                       Icons.hotel,
                       color: AppTheme.primaryBlue,
@@ -590,7 +520,7 @@ class _HotelRoomsScreenState extends State<HotelRoomsScreen> {
                   ),
                 ),
                 Text(
-                  '${_selectedRoom!.roomName} • $nights malam',
+                  '${_selectedRoom!.roomName} • $nights malam • ${_selectedRoom!.capacity} tamu',
                   style: AppTheme.bodySmall,
                 ),
               ],
@@ -622,9 +552,8 @@ class _HotelRoomsScreenState extends State<HotelRoomsScreen> {
             'roomNumber': _selectedRoom!.roomNumber,
             'checkIn': _checkInDate!.toIso8601String(),
             'checkOut': _checkOutDate!.toIso8601String(),
-            'guestsCount': _guestsCount,
-            'roomType': _selectedRoom!.roomTypeLabel,
             'capacity': _selectedRoom!.capacity,
+            'roomType': _selectedRoom!.roomTypeLabel,
           },
         ),
       ),

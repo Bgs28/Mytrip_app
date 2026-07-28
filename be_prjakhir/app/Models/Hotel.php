@@ -27,6 +27,9 @@ class Hotel extends Model
         'images' => 'array'
     ];
 
+    // Tambahkan accessor ke JSON output
+    protected $appends = ['image_url', 'images_url'];
+
     // Relasi ke Room
     public function rooms()
     {
@@ -66,9 +69,9 @@ class Hotel extends Model
     public function getImageUrlAttribute()
     {
         if ($this->image) {
-            return asset('storage/hotels/' . $this->image);
+            return config('app.url') . '/storage/hotels/' . $this->image;
         }
-        return asset('images/default-hotel.jpg');
+        return null;
     }
 
     // Accessor untuk images URL
@@ -76,7 +79,7 @@ class Hotel extends Model
     {
         if ($this->images && is_array($this->images)) {
             return array_map(function($image) {
-                return asset('storage/hotels/' . $image);
+                return config('app.url') . '/storage/hotels/' . $image;
             }, $this->images);
         }
         return [];

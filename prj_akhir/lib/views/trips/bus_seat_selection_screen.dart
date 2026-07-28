@@ -45,6 +45,11 @@ class _BusSeatSelectionScreenState extends State<BusSeatSelectionScreen> {
   int _availableSeats = 0;
 
   @override
+  void initState() {
+    super.initState();
+    _loadSeats();
+  }
+
   Future<void> _loadSeats() async {
     setState(() {
       _isLoading = true;
@@ -52,74 +57,49 @@ class _BusSeatSelectionScreenState extends State<BusSeatSelectionScreen> {
     });
 
     try {
-      print('========================================');
-      print('📤 LOADING BUS SEATS');
-      print('   busId: ${widget.busId}');
-      print('   scheduleId: ${widget.scheduleId}');
-      print('========================================');
+      print(
+        '📤 Loading bus seats for busId: ${widget.busId}, scheduleId: ${widget.scheduleId}',
+      );
 
       final response = await _busService.getBusSeats(
         busId: widget.busId,
         scheduleId: widget.scheduleId,
       );
 
-      print('📥 RESPONSE:');
-      print('   success: ${response.success}');
-      print('   message: ${response.message}');
-      print('   statusCode: ${response.statusCode}');
-      print('   data type: ${response.data.runtimeType}');
-      print('   data: ${response.data}');
+      print('📥 Response success: ${response.success}');
+      print('📥 Response message: ${response.message}');
+      print('📥 Response data: ${response.data}');
 
       if (!mounted) return;
 
       setState(() {
         if (response.success && response.data != null) {
           final data = response.data!;
-          print('📦 DATA KEYS: ${data.keys}');
 
-          // CEK seats
+          // Parse seats
           final seatsData = data['seats'];
-          print('📦 seatsData type: ${seatsData.runtimeType}');
-          print('📦 seatsData: $seatsData');
-
           if (seatsData is List) {
             _seats = List<Map<String, dynamic>>.from(seatsData);
             print('✅ Seats loaded: ${_seats.length}');
-            if (_seats.isNotEmpty) {
-              print('✅ First seat: ${_seats.first}');
-              print(
-                '✅ First seat id: ${_seats.first['id']} (${_seats.first['id'].runtimeType})',
-              );
-              print('✅ First seat seat_code: ${_seats.first['seat_code']}');
-            }
           } else {
             _seats = [];
-            print('❌ seatsData is not a List!');
+            print('⚠️ No seats data or invalid format');
           }
 
-          // CEK schedule
+          // Parse schedule
           final scheduleData = data['schedule'];
-          print('📦 scheduleData type: ${scheduleData.runtimeType}');
-          print('📦 scheduleData: $scheduleData');
-
           if (scheduleData is Map<String, dynamic>) {
             _availableSeats = (scheduleData['available_seats'] ?? 0) as int;
             print('✅ Available seats: $_availableSeats');
           } else {
             _availableSeats = 0;
-            print('❌ scheduleData is not a Map!');
+            print('⚠️ No schedule data or invalid format');
           }
         } else {
           _error = response.message ?? 'Gagal memuat data kursi';
           print('❌ Error: $_error');
         }
         _isLoading = false;
-        print('========================================');
-        print('📤 LOADING COMPLETE');
-        print('   seats count: ${_seats.length}');
-        print('   available seats: $_availableSeats');
-        print('   error: $_error');
-        print('========================================');
       });
     } catch (e) {
       if (!mounted) return;
@@ -392,28 +372,11 @@ class _BusSeatSelectionScreenState extends State<BusSeatSelectionScreen> {
   }
 
   Widget _buildSeatWidget(Map<String, dynamic> seat) {
-    // === PARSING AMAN UNTUK seatId ===
-    // seat['id'] bisa berupa int, String, atau null
-    int seatId = 0;
-    final dynamic idValue = seat['id'];
-    if (idValue is int) {
-      seatId = idValue;
-    } else if (idValue is String) {
-      seatId = int.tryParse(idValue) ?? 0;
-    } else if (idValue != null) {
-      seatId = int.tryParse(idValue.toString()) ?? 0;
-    }
-
-    // === PARSING AMAN UNTUK FIELD LAINNYA ===
-    final seatCode = seat['seat_code']?.toString() ?? '?';
-    final isAvailable = seat['is_available'] == true;
-    final isBooked = seat['is_booked'] == true;
+    final seatId = seat['id'] ?? 0;
+    final seatCode = seat['seat_code'] ?? '?';
+    final isAvailable = seat['is_available'] ?? false;
+    final isBooked = seat['is_booked'] ?? false;
     final isSelected = _selectedSeatIds.contains(seatId);
-
-    // Debug print untuk tracking
-    if (seatId == 0) {
-      print('⚠️ Warning: seatId is 0 for seat: $seat');
-    }
 
     Color bgColor;
     Color textColor;
@@ -443,12 +406,9 @@ class _BusSeatSelectionScreenState extends State<BusSeatSelectionScreen> {
               setState(() {
                 if (isSelected) {
                   _selectedSeatIds.remove(seatId);
-                  print('🔹 Seat $seatCode (ID: $seatId) deselected');
                 } else {
                   _selectedSeatIds.add(seatId);
-                  print('🔹 Seat $seatCode (ID: $seatId) selected');
                 }
-                print('🔹 Selected seats: $_selectedSeatIds');
               });
             }
           : null,

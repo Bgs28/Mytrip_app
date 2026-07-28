@@ -6,7 +6,6 @@ import '../../widgets/trip_card.dart';
 import '../../widgets/loading_widget.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/error_widget.dart';
-import '../../widgets/custom_textfield.dart';
 import '../../utils/theme.dart';
 
 class HotelListScreen extends StatefulWidget {
@@ -25,9 +24,29 @@ class _HotelListScreenState extends State<HotelListScreen> {
     _loadData();
   }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadData() async {
     final provider = Provider.of<HotelProvider>(context, listen: false);
     await provider.loadHotels(refresh: true);
+  }
+
+  void _applySearch() {
+    final provider = Provider.of<HotelProvider>(context, listen: false);
+    final query = _searchController.text.trim();
+    if (query.isEmpty) {
+      provider.loadHotels(refresh: true);
+    } else {
+      provider.searchHotels(query);
+    }
+  }
+
+  void _navigateToDetail(int id) {
+    Navigator.pushNamed(context, '/hotel-detail', arguments: id);
   }
 
   @override
@@ -49,7 +68,37 @@ class _HotelListScreenState extends State<HotelListScreen> {
       ),
       body: Column(
         children: [
-          _buildSearchBar(),
+          // Search bar selalu tampil
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+            color: AppTheme.white,
+            child: TextField(
+              controller: _searchController,
+              onChanged: (_) => _applySearch(),
+              decoration: InputDecoration(
+                hintText: 'Cari nama hotel atau lokasi...',
+                prefixIcon: const Icon(Icons.search, color: AppTheme.grey),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, color: AppTheme.grey),
+                        onPressed: () {
+                          _searchController.clear();
+                          _applySearch();
+                          setState(() {});
+                        },
+                      )
+                    : null,
+                filled: true,
+                fillColor: AppTheme.lightGrey,
+                contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ),
+          // List hotel
           Expanded(
             child: Consumer<HotelProvider>(
               builder: (context, provider, child) {
@@ -72,17 +121,20 @@ class _HotelListScreenState extends State<HotelListScreen> {
                   );
                 }
 
-                return ListView.builder(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  itemCount: provider.hotels.length,
-                  itemBuilder: (context, index) {
-                    final hotel = provider.hotels[index];
-                    return TripCard(
-                      trip: hotel,
-                      type: TripType.hotel,
-                      onTap: () => _navigateToDetail(hotel.id),
-                    );
-                  },
+                return RefreshIndicator(
+                  onRefresh: _loadData,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    itemCount: provider.hotels.length,
+                    itemBuilder: (context, index) {
+                      final hotel = provider.hotels[index];
+                      return TripCard(
+                        trip: hotel,
+                        type: TripType.hotel,
+                        onTap: () => _navigateToDetail(hotel.id),
+                      );
+                    },
+                  ),
                 );
               },
             ),
@@ -90,45 +142,5 @@ class _HotelListScreenState extends State<HotelListScreen> {
         ],
       ),
     );
-  }
-
-  Widget _buildSearchBar() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: AppTheme.cardShadow,
-      ),
-      child: CustomTextField(
-        label: 'Cari Hotel',
-        hint: 'Cari berdasarkan nama atau lokasi',
-        controller: _searchController,
-        prefixIcon: const Icon(Icons.search),
-        suffixIcon: _searchController.text.isNotEmpty
-            ? IconButton(
-                onPressed: () {
-                  _searchController.clear();
-                  _applySearch();
-                },
-                icon: const Icon(Icons.clear),
-              )
-            : null,
-        onChanged: (value) => _applySearch(),
-      ),
-    );
-  }
-
-  void _applySearch() {
-    final provider = Provider.of<HotelProvider>(context, listen: false);
-    final query = _searchController.text.trim();
-    if (query.isEmpty) {
-      provider.loadHotels(refresh: true);
-    } else {
-      provider.searchHotels(query);
-    }
-  }
-
-  void _navigateToDetail(int id) {
-    Navigator.pushNamed(context, '/hotel-detail', arguments: id);
   }
 }

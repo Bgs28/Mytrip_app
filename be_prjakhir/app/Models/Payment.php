@@ -28,6 +28,9 @@ class Payment extends Model
         'paid_at' => 'datetime'
     ];
 
+    // Tambahkan accessor ke JSON output
+    protected $appends = ['proof_url'];
+
     // Relasi ke Booking
     public function booking()
     {
@@ -74,10 +77,24 @@ class Payment extends Model
     // Accessor untuk proof URL
     public function getProofUrlAttribute()
     {
-        if ($this->proof_of_payment) {
-            return asset('storage/payments/' . $this->proof_of_payment);
+        if (!$this->proof_of_payment) {
+            return null;
         }
-        return null;
+
+        $proof = $this->proof_of_payment;
+
+        // Jika sudah URL lengkap, kembalikan langsung
+        if (str_starts_with($proof, 'http')) {
+            return $proof;
+        }
+
+        // Jika mengandung subfolder (data lama), ambil nama file saja
+        if (str_contains($proof, '/')) {
+            $filename = basename($proof);
+            return config('app.url') . '/storage/payments/' . $filename;
+        }
+
+        return config('app.url') . '/storage/payments/' . $proof;
     }
 
     // Generate invoice number

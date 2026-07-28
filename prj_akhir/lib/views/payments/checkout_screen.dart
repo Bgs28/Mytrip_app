@@ -706,64 +706,38 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       context,
       listen: false,
     );
+    final notes = _notesController.text.trim().isEmpty
+        ? null
+        : _notesController.text.trim();
 
     try {
-      // ============================================
-      // STEP 1: Create Booking (Booking utama)
-      // ============================================
-      print('📤 Creating booking...');
-      print('   Type: ${widget.args['type']}');
-      print('   Item ID: ${widget.args['itemId']}');
-      print('   Total Price: ${widget.args['price']}');
-
-      final bookingSuccess = await bookingProvider.createBooking(
-        type: widget.args['type'],
-        itemId: widget.args['itemId'],
-        totalPrice: widget.args['price'],
-      );
-
-      if (!bookingSuccess || bookingProvider.selectedBooking == null) {
-        setState(() {
-          _isLoading = false;
-        });
-        AppHelpers.showSnackBar(
-          context,
-          bookingProvider.error ?? 'Gagal membuat booking',
-          isError: true,
-        );
-        return;
-      }
-
-      final booking = bookingProvider.selectedBooking!;
-      print('✅ Booking created with ID: ${booking.id}');
-      print('   Booking Code: ${booking.bookingCode}');
+      final type = widget.args['type'] as String;
+      int bookingId;
+      String bookingCode;
+      double totalAmount;
 
       // ============================================
-      // STEP 2: Book Seats (Khusus Bus/Train)
+      // Bus / Train: bookSeats langsung (backend
+      // membuat booking sekaligus mencatat kursi)
       // ============================================
-      if (widget.args['type'] == 'bus' || widget.args['type'] == 'train') {
-        print('📤 Booking ${widget.args['type']} seats...');
-        print('   Schedule ID: ${widget.args['scheduleId']}');
-        print('   Seat IDs: ${widget.args['seatIds']}');
+      if (type == 'bus' || type == 'train') {
+        print('📤 Booking ${type} seats...');
+        print('   itemId: ${widget.args['itemId']}');
+        print('   scheduleId: ${widget.args['scheduleId']}');
+        print('   seatIds: ${widget.args['seatIds']}');
 
-        if (widget.args['type'] == 'bus') {
+        Map<String, dynamic>? seatData;
+
+        if (type == 'bus') {
           final busService = BusService();
           final seatResponse = await busService.bookBusSeats(
             busId: widget.args['itemId'],
             scheduleId: widget.args['scheduleId'],
             seatIds: List<int>.from(widget.args['seatIds']),
-            notes: _notesController.text.trim().isEmpty
-                ? null
-                : _notesController.text.trim(),
+            notes: notes,
           );
-
-          print('📥 Seat booking response: ${seatResponse.success}');
-          print('📥 Message: ${seatResponse.message}');
-
-          if (!seatResponse.success) {
-            setState(() {
-              _isLoading = false;
-            });
+          if (!seatResponse.success || seatResponse.data == null) {
+            setState(() => _isLoading = false);
             AppHelpers.showSnackBar(
               context,
               seatResponse.message ?? 'Gagal booking kursi bus',
@@ -771,24 +745,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             );
             return;
           }
-        } else if (widget.args['type'] == 'train') {
+          seatData = seatResponse.data;
+        } else {
           final trainService = TrainService();
           final seatResponse = await trainService.bookTrainSeats(
             trainId: widget.args['itemId'],
             scheduleId: widget.args['scheduleId'],
             seatIds: List<int>.from(widget.args['seatIds']),
-            notes: _notesController.text.trim().isEmpty
-                ? null
-                : _notesController.text.trim(),
+            notes: notes,
           );
-
-          print('📥 Seat booking response: ${seatResponse.success}');
-          print('📥 Message: ${seatResponse.message}');
-
-          if (!seatResponse.success) {
-            setState(() {
-              _isLoading = false;
-            });
+          if (!seatResponse.success || seatResponse.data == null) {
+            setState(() => _isLoading = false);
             AppHelpers.showSnackBar(
               context,
               seatResponse.message ?? 'Gagal booking kursi kereta',
@@ -796,49 +763,89 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             );
             return;
           }
+          seatData = seatResponse.data;
         }
+
+        // Ambil booking dari response bookSeats — parse aman karena JSON bisa int atau String
+        final bookingMap = seatData!['booking'] as Map<String, dynamic>;
+
+        int parseId(dynamic v) {
+          if (v is int) return v;
+          if (v is double) return v.toInt();
+          if (v is String) return int.tryParse(v) ?? 0;
+          return 0;
+        }
+
+        double parseDouble(dynamic v) {
+          if (v is double) return v;
+          if (v is int) return v.toDouble();
+          if (v is String) return double.tryParse(v) ?? 0.0;
+          return 0.0;
+        }
+
+        bookingId   = parseId(bookingMap['id']);
+        bookingCode = bookingMap['booking_code']?.toString() ?? '';
+        totalAmount = parseDouble(seatData['total_price'] ?? widget.args['price']);
+
+        // Simpan ke provider agar konsisten
+        bookingProvider.setSelectedBookingFromMap(bookingMap);
+
+        print('✅ Seat booking done — bookingId: $bookingId, code: $bookingCode');
+
+      // ============================================
+      // Hotel: tidak ada kursi, cukup createBooking
+      // ============================================
+      } else {
+        print('📤 Creating hotel booking...');
+        final bookingSuccess = await bookingProvider.createBooking(
+          type: type,
+          itemId: widget.args['itemId'],
+          totalPrice: widget.args['price'],
+        );
+
+        if (!bookingSuccess || bookingProvider.selectedBooking == null) {
+          setState(() => _isLoading = false);
+          AppHelpers.showSnackBar(
+            context,
+            bookingProvider.error ?? 'Gagal membuat booking',
+            isError: true,
+          );
+          return;
+        }
+
+        final booking = bookingProvider.selectedBooking!;
+        bookingId   = booking.id;
+        bookingCode = booking.bookingCode;
+        totalAmount = widget.args['price'].toDouble();
+        print('✅ Hotel booking created — id: $bookingId');
       }
 
       // ============================================
-      // STEP 3: Create Payment
+      // STEP PAYMENT: buat record payment
       // ============================================
-      print('📤 Creating payment for booking ID: ${booking.id}');
-      print('   Payment method: $_selectedPaymentMethod');
-      print(
-        '   Promo: ${_isPromoValid ? _promoCodeController.text.trim() : 'Tidak ada'}',
-      );
+      print('📤 Creating payment for bookingId: $bookingId');
 
       final paymentService = PaymentService();
       final paymentResponse = await paymentService.createPayment(
-        bookingId: booking.id,
+        bookingId: bookingId,
         paymentMethod: _selectedPaymentMethod!,
         promoCode: _isPromoValid ? _promoCodeController.text.trim() : null,
-        notes: _notesController.text.trim().isEmpty
-            ? null
-            : _notesController.text.trim(),
+        notes: notes,
       );
 
-      print('📥 Payment response success: ${paymentResponse.success}');
-      print('📥 Payment response data: ${paymentResponse.data}');
-
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
 
       if (paymentResponse.success && paymentResponse.data != null) {
         final payment = paymentResponse.data!;
-        print('✅ Payment created with ID: ${payment.id}');
-        print('   Invoice: ${payment.invoiceNumber}');
-        print('   Total: ${payment.totalAmount}');
+        print('✅ Payment created — id: ${payment.id}');
 
         if (mounted) {
-          // Navigate ke halaman upload bukti pembayaran
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
               builder: (context) => PaymentUploadScreen(
                 paymentId: payment.id,
-                bookingCode: booking.bookingCode,
+                bookingCode: bookingCode,
                 totalAmount: payment.totalAmount,
                 paymentMethod: _selectedPaymentMethod!,
               ),
@@ -846,7 +853,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           );
         }
       } else {
-        print('❌ Payment creation failed: ${paymentResponse.message}');
         AppHelpers.showSnackBar(
           context,
           paymentResponse.message ?? 'Gagal membuat pembayaran',
@@ -854,11 +860,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         );
       }
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
       print('❌ Error in checkout: $e');
-      print('❌ Stack trace: ${StackTrace.current}');
       AppHelpers.showSnackBar(context, 'Terjadi kesalahan: $e', isError: true);
     }
   }

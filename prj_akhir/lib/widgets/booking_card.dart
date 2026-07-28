@@ -109,6 +109,28 @@ class BookingCard extends StatelessWidget {
                           color: AppTheme.success,
                         ),
                       ),
+                    )
+                  else if (booking.status.toLowerCase() == 'pending' &&
+                      booking.payment != null &&
+                      !booking.payment!.hasProof)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppTheme.error.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppTheme.error),
+                      ),
+                      child: const Text(
+                        '⚠️ Upload Bukti',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.error,
+                        ),
+                      ),
                     ),
                 ],
               ),

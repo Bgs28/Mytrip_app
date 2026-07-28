@@ -24,6 +24,147 @@ class TripCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (type == TripType.hotel) {
+      return _buildHotelCard(context);
+    }
+    return _buildTripCard(context);
+  }
+
+  // ─── Hotel card: foto besar + nama + lokasi + rating + tombol ───────────────
+  Widget _buildHotelCard(BuildContext context) {
+    final hotel = trip as Hotel;
+    final imageUrl = hotel.imageUrl;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Card(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Foto hotel
+            Container(
+              height: 160,
+              width: double.infinity,
+              color: AppTheme.primaryLightestBlue,
+              child: imageUrl.isNotEmpty
+                  ? Image.network(
+                      imageUrl,
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, progress) {
+                        if (progress == null) return child;
+                        return const Center(
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        );
+                      },
+                      errorBuilder: (_, __, ___) => const Center(
+                        child: Icon(
+                          Icons.hotel,
+                          size: 48,
+                          color: AppTheme.primaryBlue,
+                        ),
+                      ),
+                    )
+                  : const Center(
+                      child: Icon(
+                        Icons.hotel,
+                        size: 48,
+                        color: AppTheme.primaryBlue,
+                      ),
+                    ),
+            ),
+            // Info hotel
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          hotel.name,
+                          style: AppTheme.heading4,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.location_on,
+                              size: 14,
+                              color: AppTheme.grey,
+                            ),
+                            const SizedBox(width: 2),
+                            Expanded(
+                              child: Text(
+                                hotel.location,
+                                style: AppTheme.bodySmall,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        if (hotel.rating != null)
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.star_rounded,
+                                size: 16,
+                                color: AppTheme.warning,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                hotel.rating!.toStringAsFixed(1),
+                                style: AppTheme.bodyMedium.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  GestureDetector(
+                    onTap: onTap,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryBlue,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Text(
+                        'Lihat Detail',
+                        style: TextStyle(
+                          color: AppTheme.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ─── Bus / Train card: icon + nama + asal→tujuan + harga + tombol ───────────
+  Widget _buildTripCard(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: Card(
@@ -41,7 +182,7 @@ class TripCard extends StatelessWidget {
             children: [
               _buildHeader(),
               const SizedBox(height: 12),
-              _buildContent(),
+              _buildBusTrain(),
               const SizedBox(height: 12),
               _buildFooter(),
             ],
@@ -73,104 +214,62 @@ class TripCard extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
-              if (_getSubtitle() != null) ...[
-                const SizedBox(height: 4),
-                Text(_getSubtitle()!, style: AppTheme.bodySmall),
-              ],
+              const SizedBox(height: 4),
+              Text(
+                type == TripType.bus ? 'Bus' : 'Kereta Api',
+                style: AppTheme.bodySmall,
+              ),
             ],
           ),
         ),
-        if (isFavorite) Icon(Icons.favorite, color: AppTheme.error, size: 20),
+        if (isFavorite)
+          const Icon(Icons.favorite, color: AppTheme.error, size: 20),
       ],
     );
   }
 
-  Widget _buildContent() {
-    switch (type) {
-      case TripType.bus:
-      case TripType.train:
-        return Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _getFrom(),
-                    style: AppTheme.bodyMedium.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Berangkat: ${_getDepartureTime()}',
-                    style: AppTheme.bodySmall,
-                  ),
-                ],
-              ),
-            ),
-            const Icon(Icons.arrow_forward, color: AppTheme.grey, size: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    _getDestination(),
-                    style: AppTheme.bodyMedium.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Kursi: ${_getSeat()} tersisa',
-                    style: AppTheme.bodySmall,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        );
-      case TripType.hotel:
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(_getLocation(), style: AppTheme.bodyMedium),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                if (_getRating() != null) ...[
-                  Icon(Icons.star, color: AppTheme.warning, size: 16),
-                  const SizedBox(width: 4),
-                  Text(
-                    _getRating()!.toString(),
-                    style: AppTheme.bodyMedium.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                ],
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryLightestBlue,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    _getTypeLabel(),
-                    style: AppTheme.bodySmall.copyWith(
-                      color: AppTheme.primaryBlue,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+  Widget _buildBusTrain() {
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _getFrom(),
+                style: AppTheme.bodyMedium.copyWith(
+                  fontWeight: FontWeight.w600,
                 ),
-              ],
-            ),
-          ],
-        );
-    }
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Berangkat: ${_getDepartureTime()}',
+                style: AppTheme.bodySmall,
+              ),
+            ],
+          ),
+        ),
+        const Icon(Icons.arrow_forward, color: AppTheme.grey, size: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                _getDestination(),
+                style: AppTheme.bodyMedium.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Kursi: ${_getSeat()} tersisa',
+                style: AppTheme.bodySmall,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildFooter() {
@@ -226,17 +325,6 @@ class TripCard extends StatelessWidget {
     }
   }
 
-  String? _getSubtitle() {
-    switch (type) {
-      case TripType.bus:
-        return 'Bus';
-      case TripType.train:
-        return 'Kereta Api';
-      case TripType.hotel:
-        return null;
-    }
-  }
-
   String _getFrom() {
     switch (type) {
       case TripType.bus:
@@ -267,31 +355,6 @@ class TripCard extends StatelessWidget {
         return (trip as Train).departureTime;
       case TripType.hotel:
         return '';
-    }
-  }
-
-  String _getLocation() {
-    if (type == TripType.hotel) {
-      return (trip as Hotel).location;
-    }
-    return '';
-  }
-
-  double? _getRating() {
-    if (type == TripType.hotel) {
-      return (trip as Hotel).rating;
-    }
-    return null;
-  }
-
-  String _getTypeLabel() {
-    switch (type) {
-      case TripType.bus:
-        return 'BUS';
-      case TripType.train:
-        return 'TRAIN';
-      case TripType.hotel:
-        return 'HOTEL';
     }
   }
 

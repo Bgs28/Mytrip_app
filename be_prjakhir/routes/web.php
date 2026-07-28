@@ -75,6 +75,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // Logout Admin
         Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+        // Laporan
+        Route::get('/reports', [\App\Http\Controllers\Admin\ReportController::class, 'index'])->name('reports.index');
+        Route::get('/reports/bookings', [\App\Http\Controllers\Admin\ReportController::class, 'bookings'])->name('reports.bookings');
+        Route::get('/reports/revenue', [\App\Http\Controllers\Admin\ReportController::class, 'revenue'])->name('reports.revenue');
+        Route::get('/reports/monthly', [\App\Http\Controllers\Admin\ReportController::class, 'monthly'])->name('reports.monthly');
         
     });
 

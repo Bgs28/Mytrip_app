@@ -32,10 +32,18 @@ class TrainProvider extends ChangeNotifier {
     _setLoading(true);
     _error = null;
 
+    // Reset search state saat refresh tanpa filter
+    if (refresh && from == null && destination == null) {
+      _searchFrom = '';
+      _searchDestination = '';
+    }
+
     try {
       final response = await _trainService.getTrains(
-        from: from ?? _searchFrom,
-        destination: destination ?? _searchDestination,
+        from: (from ?? _searchFrom).isNotEmpty ? (from ?? _searchFrom) : null,
+        destination: (destination ?? _searchDestination).isNotEmpty
+            ? (destination ?? _searchDestination)
+            : null,
       );
 
       if (response.success && response.data != null) {
@@ -58,17 +66,17 @@ class TrainProvider extends ChangeNotifier {
   Future<void> searchTrains({String? from, String? destination}) async {
     _setLoading(true);
     _error = null;
+    _searchFrom = from ?? '';
+    _searchDestination = destination ?? '';
 
     try {
       final response = await _trainService.getTrains(
-        from: from,
-        destination: destination,
+        from: (from ?? '').isNotEmpty ? from : null,
+        destination: (destination ?? '').isNotEmpty ? destination : null,
       );
 
       if (response.success && response.data != null) {
         _trains = response.data!;
-        if (from != null) _searchFrom = from;
-        if (destination != null) _searchDestination = destination;
       } else {
         _error = response.message;
         _trains = [];

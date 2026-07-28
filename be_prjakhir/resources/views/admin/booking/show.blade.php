@@ -140,10 +140,11 @@
                             <div class="mt-4">
                                 <p class="text-sm text-gray-500 mb-2">Bukti Pembayaran:</p>
                                 <div class="border rounded-lg overflow-hidden max-w-md">
-                                    <img src="{{ asset('storage/' . $booking->payment->proof_of_payment) }}" 
+                                    <img src="{{ $booking->payment->proof_url }}" 
                                          alt="Bukti Pembayaran"
                                          class="w-full cursor-pointer hover:opacity-90 transition"
-                                         onclick="window.open(this.src, '_blank')">
+                                         onclick="window.open(this.src, '_blank')"
+                                         onerror="this.parentElement.innerHTML='<p class=\'text-red-500 text-sm p-3\'>⚠️ Gambar tidak dapat dimuat: {{ $booking->payment->proof_url }}</p>'">
                                 </div>
                             </div>
                         @else

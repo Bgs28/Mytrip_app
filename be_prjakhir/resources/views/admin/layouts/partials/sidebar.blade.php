@@ -165,6 +165,69 @@
             </svg>
             <span>Data Promo</span>
         </a>
+
+        <!-- Laporan -->
+        <div class="space-y-0.5">
+            <div class="flex items-center justify-between px-3 md:px-4 py-2.5 md:py-3 rounded-xl font-medium transition-all duration-200 cursor-pointer hover:bg-blue-800 hover:text-white text-sm md:text-base
+                {{ request()->routeIs('admin.reports.*') ? 'bg-blue-800 text-white' : 'text-blue-200' }}"
+                onclick="toggleSubmenu('reportMenu')">
+                <div class="flex items-center">
+                    <svg class="w-5 h-5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586
+                                 a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    <span>Laporan</span>
+                </div>
+                <svg id="reportMenuArrow" class="w-4 h-4 transition-transform duration-200 flex-shrink-0
+                     {{ request()->routeIs('admin.reports.*') ? 'rotate-180' : '' }}"
+                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+            </div>
+            <div id="reportMenu" class="ml-4 md:ml-6 space-y-0.5
+                {{ request()->routeIs('admin.reports.*') ? '' : 'hidden' }}">
+                <a href="{{ route('admin.reports.index') }}"
+                   class="flex items-center px-3 md:px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200
+                   {{ request()->routeIs('admin.reports.index') ? 'bg-blue-700 text-white' : 'text-blue-200 hover:bg-blue-700 hover:text-white' }}">
+                    <svg class="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"/>
+                    </svg>
+                    Semua Laporan
+                </a>
+                <a href="{{ route('admin.reports.bookings') }}"
+                   class="flex items-center px-3 md:px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200
+                   {{ request()->routeIs('admin.reports.bookings') ? 'bg-blue-700 text-white' : 'text-blue-200 hover:bg-blue-700 hover:text-white' }}">
+                    <svg class="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2
+                                 M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                    </svg>
+                    Lap. Booking
+                </a>
+                <a href="{{ route('admin.reports.revenue') }}"
+                   class="flex items-center px-3 md:px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200
+                   {{ request()->routeIs('admin.reports.revenue') ? 'bg-blue-700 text-white' : 'text-blue-200 hover:bg-blue-700 hover:text-white' }}">
+                    <svg class="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2
+                                 m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1
+                                 m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    Lap. Pendapatan
+                </a>
+                <a href="{{ route('admin.reports.monthly') }}"
+                   class="flex items-center px-3 md:px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200
+                   {{ request()->routeIs('admin.reports.monthly') ? 'bg-blue-700 text-white' : 'text-blue-200 hover:bg-blue-700 hover:text-white' }}">
+                    <svg class="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7
+                                 a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                    Rekap Bulanan
+                </a>
+            </div>
+        </div>
     </nav>
 </aside>
 

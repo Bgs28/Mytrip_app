@@ -18,12 +18,12 @@ class BusController extends Controller
         $query = Bus::query();
 
         // Filter Kota Asal (jika dicari di Flutter)
-        if ($request->has('from') && $request->from != '') {
+        if ($request->filled('from')) {
             $query->where('from', 'LIKE', '%' . $request->from . '%');
         }
 
         // Filter Kota Tujuan (jika dicari di Flutter)
-        if ($request->has('destination') && $request->destination != '') {
+        if ($request->filled('destination')) {
             $query->where('destination', 'LIKE', '%' . $request->destination . '%');
         }
 
@@ -184,9 +184,10 @@ public function bookSeats(Request $request, $id)
 
         $validator = Validator::make($request->all(), [
             'schedule_id' => 'required|exists:bus_schedules,id',
-            'seat_ids' => 'required|array|min:1',
-            'seat_ids.*' => 'exists:bus_seats,id',
-            'notes' => 'nullable|string'
+            'seat_ids'    => 'required|array|min:1',
+            'seat_ids.*'  => 'exists:bus_seats,id',
+            'booking_id'  => 'nullable|exists:bookings,id',
+            'notes'       => 'nullable|string'
         ]);
 
         if ($validator->fails()) {
@@ -233,18 +234,34 @@ public function bookSeats(Request $request, $id)
         // Hitung total harga
         $totalPrice = $schedule->price * count($request->seat_ids);
 
-        // Create booking
-        $booking = \App\Models\Booking::create([
-            'user_id' => $request->user()->id,
-            'type' => 'bus',
-            'item_id' => $id,
-            'booking_code' => 'MYT-' . strtoupper(\Illuminate\Support\Str::random(8)),
-            'total_price' => $totalPrice,
-            'status' => 'pending',
-            'notes' => $request->notes
-        ]);
+        // Gunakan booking yang sudah ada, atau buat baru jika booking_id tidak dikirim
+        if ($request->filled('booking_id')) {
+            $booking = \App\Models\Booking::where('id', $request->booking_id)
+                ->where('user_id', $request->user()->id)
+                ->first();
 
-        Log::info('Booking created', ['booking_id' => $booking->id]);
+            if (!$booking) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Booking tidak ditemukan atau bukan milik Anda'
+                ], 404);
+            }
+
+            // Update total price sesuai kursi yang dipilih
+            $booking->update(['total_price' => $totalPrice]);
+            Log::info('Using existing booking', ['booking_id' => $booking->id]);
+        } else {
+            $booking = \App\Models\Booking::create([
+                'user_id'      => $request->user()->id,
+                'type'         => 'bus',
+                'item_id'      => $id,
+                'booking_code' => 'MYT-' . strtoupper(\Illuminate\Support\Str::random(8)),
+                'total_price'  => $totalPrice,
+                'status'       => 'pending',
+                'notes'        => $request->notes
+            ]);
+            Log::info('New booking created', ['booking_id' => $booking->id]);
+        }
 
         // Create booking seats - INI YANG PENTING
         $bookingSeats = [];

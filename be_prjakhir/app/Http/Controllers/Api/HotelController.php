@@ -14,9 +14,12 @@ class HotelController extends Controller
         $query = Hotel::query();
 
         // Filter berdasarkan nama atau lokasi hotel
-        if ($request->has('search') && $request->search != '') {
-            $query->where('hotel_name', 'LIKE', '%' . $request->search . '%')
-                  ->orWhere('location', 'LIKE', '%' . $request->search . '%');
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'LIKE', '%' . $search . '%')
+                  ->orWhere('location', 'LIKE', '%' . $search . '%');
+            });
         }
 
         $hotels = $query->latest()->get();

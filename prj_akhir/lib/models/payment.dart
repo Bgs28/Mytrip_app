@@ -1,4 +1,5 @@
 // lib/models/payment.dart
+import '../utils/constants.dart';
 import 'booking.dart';
 import 'promo.dart';
 import 'user.dart';
@@ -68,7 +69,11 @@ class Payment {
       totalAmount: parseToDouble(json['total_amount']),
       paymentMethod: json['payment_method'] ?? '',
       status: json['status'] ?? 'pending',
-      proofOfPayment: json['proof_of_payment'],
+      // Gunakan proof_url (URL lengkap dari backend accessor) jika ada,
+      // fallback ke proof_of_payment (nama file)
+      proofOfPayment: json['proof_url']?.toString().isNotEmpty == true
+          ? json['proof_url']
+          : json['proof_of_payment'],
       paidAt: json['paid_at'] != null
           ? DateTime.tryParse(json['paid_at'])
           : null,
@@ -135,8 +140,11 @@ class Payment {
   }
 
   bool get hasProof => proofOfPayment != null && proofOfPayment!.isNotEmpty;
-  String get proofUrl => proofOfPayment != null
-      // ? 'http://192.168.126.112:8000/storage/payments/$proofOfPayment'
-      ? 'http://127.0.0.1:8000/storage/payments/$proofOfPayment'
-      : '';
+  /// Jika proofOfPayment sudah URL lengkap (dari backend accessor proof_url), pakai langsung.
+  /// Jika masih nama file, bangun URL via AppConstants.
+  String get proofUrl {
+    if (proofOfPayment == null || proofOfPayment!.isEmpty) return '';
+    if (proofOfPayment!.startsWith('http')) return proofOfPayment!;
+    return AppConstants.buildStorageUrl(proofOfPayment, folder: 'payments');
+  }
 }

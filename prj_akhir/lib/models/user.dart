@@ -1,4 +1,5 @@
 // lib/models/user.dart
+import '../utils/constants.dart';
 class User {
   final int id;
   final String name;
@@ -79,4 +80,7 @@ class User {
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
+
+  /// URL lengkap avatar user dari Laravel storage
+  String get avatarUrl => AppConstants.buildStorageUrl(avatar, folder: 'avatars');
 }

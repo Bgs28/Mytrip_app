@@ -1,4 +1,5 @@
 // lib/models/hotel.dart - Tambahkan status jika perlu
+import '../utils/constants.dart';
 class Hotel {
   final int id;
   final String name;
@@ -56,7 +57,11 @@ class Hotel {
       description: json['description'],
       price: parseToInt(json['price']),
       rating: parseToDouble(json['rating']),
-      image: json['image'],
+      // Gunakan image_url (URL lengkap dari backend accessor) jika ada,
+      // fallback ke image (nama file) yang akan diproses buildStorageUrl
+      image: json['image_url']?.toString().isNotEmpty == true
+          ? json['image_url']
+          : json['image'],
       status: json['status'] ?? 'active',
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at']) ?? DateTime.now()
@@ -80,5 +85,14 @@ class Hotel {
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
+  }
+
+  /// URL lengkap gambar hotel.
+  /// Jika image sudah URL lengkap (dari backend accessor), pakai langsung.
+  /// Jika masih nama file, bangun URL via AppConstants.
+  String get imageUrl {
+    if (image == null || image!.isEmpty) return '';
+    if (image!.startsWith('http')) return image!;
+    return AppConstants.buildStorageUrl(image, folder: 'hotels');
   }
 }

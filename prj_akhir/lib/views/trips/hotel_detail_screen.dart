@@ -368,12 +368,13 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
                 borderRadius: BorderRadius.circular(8),
                 image: room.images != null && room.images!.isNotEmpty
                     ? DecorationImage(
-                        image: NetworkImage(room.images![0]),
+                        image: NetworkImage(room.imageUrls.first),
                         fit: BoxFit.cover,
+                        onError: (_, __) {},
                       )
                     : null,
               ),
-              child: room.images == null || room.images!.isEmpty
+              child: room.imageUrls.isEmpty
                   ? const Icon(
                       Icons.hotel,
                       color: AppTheme.primaryBlue,

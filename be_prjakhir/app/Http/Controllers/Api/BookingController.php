@@ -66,7 +66,8 @@ class BookingController extends Controller
     // Riwayat (History) booking milik user yang sedang login
     public function history(Request $request)
     {
-        $bookings = Booking::where('user_id', $request->user()->id) // FIX
+        $bookings = Booking::with('payment')
+            ->where('user_id', $request->user()->id)
             ->latest()
             ->get();
 
@@ -80,7 +81,9 @@ class BookingController extends Controller
     // Detail satu booking milik user yang sedang login
     public function show(Request $request, $id)
     {
-        $booking = Booking::where('user_id', $request->user()->id)->find($id); // FIX
+        $booking = Booking::with('payment')
+            ->where('user_id', $request->user()->id)
+            ->find($id);
 
         if (!$booking) {
             return response()->json([
@@ -111,7 +114,9 @@ class BookingController extends Controller
     //cancel booking
      public function cancel(Request $request, $id)
     {
-        $booking = Booking::where('user_id', $request->user()->id)->find($id);
+        $booking = Booking::with('payment')
+            ->where('user_id', $request->user()->id)
+            ->find($id);
 
         if (!$booking) {
             return response()->json([
@@ -139,6 +144,10 @@ class BookingController extends Controller
                 'status' => 'refunded'
             ]);
         }
+
+        // Refresh data dengan relasi payment terbaru
+        $booking->refresh();
+        $booking->load('payment');
 
         return response()->json([
             'success' => true,
