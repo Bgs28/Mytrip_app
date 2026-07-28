@@ -29,6 +29,7 @@ class _TrainDetailScreenState extends State<TrainDetailScreen> {
   List<TrainSchedule> _schedules = [];
   bool _isLoadingSchedules = false;
   TrainSchedule? _selectedSchedule;
+  String? _error;
 
   @override
   void initState() {
@@ -47,22 +48,37 @@ class _TrainDetailScreenState extends State<TrainDetailScreen> {
       _isLoadingSchedules = true;
     });
 
-    final response = await _trainService.getTrainSchedules(widget.trainId);
+    try {
+      final response = await _trainService.getTrainSchedules(widget.trainId);
 
-    if (mounted) {
-      setState(() {
-        if (response.success && response.data != null) {
-          _schedules = response.data!;
-          // Pilih schedule aktif pertama
-          if (_schedules.isNotEmpty) {
-            _selectedSchedule = _schedules.firstWhere(
-              (s) => s.status == 'active',
-              orElse: () => _schedules.first,
-            );
+      if (mounted) {
+        setState(() {
+          if (response.success && response.data != null) {
+            _schedules = response.data!;
+            print('✅ Schedules loaded: ${_schedules.length}');
+
+            if (_schedules.isNotEmpty) {
+              _selectedSchedule = _schedules.firstWhere(
+                (s) => s.status == 'active',
+                orElse: () => _schedules.first,
+              );
+              print('✅ Selected schedule: ${_selectedSchedule?.id}');
+            }
+          } else {
+            print('❌ Failed to load schedules: ${response.message}');
+            _error = response.message ?? 'Gagal memuat jadwal';
           }
-        }
-        _isLoadingSchedules = false;
-      });
+          _isLoadingSchedules = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = 'Terjadi kesalahan: $e';
+          _isLoadingSchedules = false;
+        });
+      }
+      print('❌ Error loading schedules: $e');
     }
   }
 

@@ -89,7 +89,6 @@ class ApiService {
   Future<ApiResponse<T>> get<T>(
     String endpoint, {
     Map<String, dynamic>? queryParameters,
-    T Function(dynamic)? fromJsonT,
   }) async {
     try {
       final response = await _dio.get(
@@ -97,20 +96,36 @@ class ApiService {
         queryParameters: queryParameters,
       );
 
+      print('📥 GET Response: ${response.statusCode}');
+      print('📥 GET Data: ${response.data}');
+
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = response.data;
-        if (fromJsonT != null) {
+
+        // Jika T adalah Map<String, dynamic>, return full response
+        if (T == Map<String, dynamic>) {
           return ApiResponse<T>(
             success: data['success'] ?? true,
             message: data['message'] ?? 'Success',
-            data: fromJsonT(data),
+            data: data as T,
           );
         }
-        return ApiResponse<T>(
-          success: data['success'] ?? true,
-          message: data['message'] ?? 'Success',
-          data: data['data'] as T?,
-        );
+        // Jika T adalah List, return data array
+        else if (T == List) {
+          return ApiResponse<T>(
+            success: data['success'] ?? true,
+            message: data['message'] ?? 'Success',
+            data: data['data'] as T?,
+          );
+        }
+        // Default
+        else {
+          return ApiResponse<T>(
+            success: data['success'] ?? true,
+            message: data['message'] ?? 'Success',
+            data: data['data'] as T?,
+          );
+        }
       }
 
       return ApiResponse<T>.error(
@@ -118,18 +133,17 @@ class ApiService {
         statusCode: response.statusCode,
       );
     } on DioException catch (e) {
+      print('❌ Dio Error: ${e.message}');
+      print('❌ Response: ${e.response?.data}');
       return _handleError<T>(e);
     } catch (e) {
+      print('❌ Error: $e');
       return ApiResponse<T>.error('Unexpected error: $e');
     }
   }
 
   // Generic POST request
-  Future<ApiResponse<T>> post<T>(
-    String endpoint, {
-    dynamic data,
-    T Function(dynamic)? fromJsonT,
-  }) async {
+  Future<ApiResponse<T>> post<T>(String endpoint, {dynamic data}) async {
     try {
       debugPrint('📤 POST Request: $endpoint');
       debugPrint('📤 Data: $data');
@@ -141,18 +155,19 @@ class ApiService {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final responseData = response.data;
-        if (fromJsonT != null) {
+        if (T == Map<String, dynamic>) {
           return ApiResponse<T>(
             success: responseData['success'] ?? true,
             message: responseData['message'] ?? 'Success',
-            data: fromJsonT(responseData),
+            data: responseData as T,
+          );
+        } else {
+          return ApiResponse<T>(
+            success: responseData['success'] ?? true,
+            message: responseData['message'] ?? 'Success',
+            data: responseData['data'] as T?,
           );
         }
-        return ApiResponse<T>(
-          success: responseData['success'] ?? true,
-          message: responseData['message'] ?? 'Success',
-          data: responseData['data'] as T?,
-        );
       }
 
       return ApiResponse<T>.error(

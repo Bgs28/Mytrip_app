@@ -25,23 +25,55 @@ class BusSchedule {
   });
 
   factory BusSchedule.fromJson(Map<String, dynamic> json) {
+    // Helper function untuk parse price dengan aman
+    int parsePrice(dynamic value) {
+      if (value == null) return 0;
+      if (value is int) return value;
+      if (value is double) return value.toInt();
+      if (value is String) {
+        final cleaned = value.replaceAll(RegExp(r'[^0-9]'), '');
+        if (cleaned.isEmpty) return 0;
+        return int.tryParse(cleaned) ?? 0;
+      }
+      return 0;
+    }
+
+    int parseToInt(dynamic value) {
+      if (value == null) return 0;
+      if (value is int) return value;
+      if (value is double) return value.toInt();
+      if (value is String) {
+        final cleaned = value.replaceAll(RegExp(r'[^0-9]'), '');
+        if (cleaned.isEmpty) return 0;
+        return int.tryParse(cleaned) ?? 0;
+      }
+      return 0;
+    }
+
+    DateTime parseDate(dynamic value) {
+      if (value == null) return DateTime.now();
+      if (value is DateTime) return value;
+      if (value is String) {
+        try {
+          return DateTime.parse(value);
+        } catch (e) {
+          return DateTime.now();
+        }
+      }
+      return DateTime.now();
+    }
+
     return BusSchedule(
       id: json['id'] ?? 0,
       busId: json['bus_id'] ?? 0,
-      departureDate: DateTime.parse(
-        json['departure_date'] ?? DateTime.now().toIso8601String(),
-      ),
+      departureDate: parseDate(json['departure_date']),
       departureTime: json['departure_time'] ?? '',
       arrivalTime: json['arrival_time'] ?? '',
-      availableSeats: json['available_seats'] ?? 0,
-      price: json['price'] ?? 0,
+      availableSeats: parseToInt(json['available_seats']),
+      price: parsePrice(json['price']),
       status: json['status'] ?? 'active',
-      createdAt: DateTime.parse(
-        json['created_at'] ?? DateTime.now().toIso8601String(),
-      ),
-      updatedAt: DateTime.parse(
-        json['updated_at'] ?? DateTime.now().toIso8601String(),
-      ),
+      createdAt: parseDate(json['created_at']),
+      updatedAt: parseDate(json['updated_at']),
     );
   }
 

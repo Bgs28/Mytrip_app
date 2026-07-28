@@ -11,6 +11,8 @@ import '../../widgets/custom_button.dart';
 import '../../widgets/custom_textfield.dart';
 import '../../widgets/loading_widget.dart';
 import 'payment_upload_screen.dart';
+import '../../services/bus_service.dart';
+import '../../services/train_service.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final Map<String, dynamic> args;
@@ -706,8 +708,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
 
     try {
-      // STEP 1: Create Booking
+      // ============================================
+      // STEP 1: Create Booking (Booking utama)
+      // ============================================
       print('📤 Creating booking...');
+      print('   Type: ${widget.args['type']}');
+      print('   Item ID: ${widget.args['itemId']}');
+      print('   Total Price: ${widget.args['price']}');
+
       final bookingSuccess = await bookingProvider.createBooking(
         type: widget.args['type'],
         itemId: widget.args['itemId'],
@@ -728,10 +736,77 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
       final booking = bookingProvider.selectedBooking!;
       print('✅ Booking created with ID: ${booking.id}');
+      print('   Booking Code: ${booking.bookingCode}');
 
-      // STEP 2: Create Payment
+      // ============================================
+      // STEP 2: Book Seats (Khusus Bus/Train)
+      // ============================================
+      if (widget.args['type'] == 'bus' || widget.args['type'] == 'train') {
+        print('📤 Booking ${widget.args['type']} seats...');
+        print('   Schedule ID: ${widget.args['scheduleId']}');
+        print('   Seat IDs: ${widget.args['seatIds']}');
+
+        if (widget.args['type'] == 'bus') {
+          final busService = BusService();
+          final seatResponse = await busService.bookBusSeats(
+            busId: widget.args['itemId'],
+            scheduleId: widget.args['scheduleId'],
+            seatIds: List<int>.from(widget.args['seatIds']),
+            notes: _notesController.text.trim().isEmpty
+                ? null
+                : _notesController.text.trim(),
+          );
+
+          print('📥 Seat booking response: ${seatResponse.success}');
+          print('📥 Message: ${seatResponse.message}');
+
+          if (!seatResponse.success) {
+            setState(() {
+              _isLoading = false;
+            });
+            AppHelpers.showSnackBar(
+              context,
+              seatResponse.message ?? 'Gagal booking kursi bus',
+              isError: true,
+            );
+            return;
+          }
+        } else if (widget.args['type'] == 'train') {
+          final trainService = TrainService();
+          final seatResponse = await trainService.bookTrainSeats(
+            trainId: widget.args['itemId'],
+            scheduleId: widget.args['scheduleId'],
+            seatIds: List<int>.from(widget.args['seatIds']),
+            notes: _notesController.text.trim().isEmpty
+                ? null
+                : _notesController.text.trim(),
+          );
+
+          print('📥 Seat booking response: ${seatResponse.success}');
+          print('📥 Message: ${seatResponse.message}');
+
+          if (!seatResponse.success) {
+            setState(() {
+              _isLoading = false;
+            });
+            AppHelpers.showSnackBar(
+              context,
+              seatResponse.message ?? 'Gagal booking kursi kereta',
+              isError: true,
+            );
+            return;
+          }
+        }
+      }
+
+      // ============================================
+      // STEP 3: Create Payment
+      // ============================================
       print('📤 Creating payment for booking ID: ${booking.id}');
-      print('📤 Payment method: $_selectedPaymentMethod');
+      print('   Payment method: $_selectedPaymentMethod');
+      print(
+        '   Promo: ${_isPromoValid ? _promoCodeController.text.trim() : 'Tidak ada'}',
+      );
 
       final paymentService = PaymentService();
       final paymentResponse = await paymentService.createPayment(
@@ -743,6 +818,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             : _notesController.text.trim(),
       );
 
+      print('📥 Payment response success: ${paymentResponse.success}');
+      print('📥 Payment response data: ${paymentResponse.data}');
+
       setState(() {
         _isLoading = false;
       });
@@ -750,8 +828,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       if (paymentResponse.success && paymentResponse.data != null) {
         final payment = paymentResponse.data!;
         print('✅ Payment created with ID: ${payment.id}');
+        print('   Invoice: ${payment.invoiceNumber}');
+        print('   Total: ${payment.totalAmount}');
 
         if (mounted) {
+          // Navigate ke halaman upload bukti pembayaran
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
@@ -777,6 +858,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         _isLoading = false;
       });
       print('❌ Error in checkout: $e');
+      print('❌ Stack trace: ${StackTrace.current}');
       AppHelpers.showSnackBar(context, 'Terjadi kesalahan: $e', isError: true);
     }
   }

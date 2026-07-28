@@ -45,6 +45,7 @@ class _TrainSeatSelectionScreenState extends State<TrainSeatSelectionScreen> {
   List<int> _selectedSeatIds = [];
   bool _isLoading = true;
   String? _error;
+  int _availableSeats = 0;
 
   @override
   void initState() {
@@ -58,20 +59,58 @@ class _TrainSeatSelectionScreenState extends State<TrainSeatSelectionScreen> {
       _error = null;
     });
 
-    final response = await _trainService.getTrainSeats(
-      trainId: widget.trainId,
-      scheduleId: widget.scheduleId,
-    );
+    try {
+      print(
+        '📤 Loading train seats for trainId: ${widget.trainId}, scheduleId: ${widget.scheduleId}',
+      );
 
-    if (mounted) {
+      final response = await _trainService.getTrainSeats(
+        trainId: widget.trainId,
+        scheduleId: widget.scheduleId,
+      );
+
+      print('📥 Response success: ${response.success}');
+      print('📥 Response message: ${response.message}');
+      print('📥 Response data: ${response.data}');
+
+      if (!mounted) return;
+
       setState(() {
         if (response.success && response.data != null) {
-          _seats = response.data!;
+          final data = response.data!;
+
+          // Parse seats
+          final seatsData = data['seats'];
+          if (seatsData is List) {
+            _seats = List<Map<String, dynamic>>.from(seatsData);
+            print('✅ Seats loaded: ${_seats.length}');
+          } else {
+            _seats = [];
+            print('⚠️ No seats data or invalid format');
+          }
+
+          // Parse schedule
+          final scheduleData = data['schedule'];
+          if (scheduleData is Map<String, dynamic>) {
+            _availableSeats = (scheduleData['available_seats'] ?? 0) as int;
+            print('✅ Available seats: $_availableSeats');
+          } else {
+            _availableSeats = 0;
+            print('⚠️ No schedule data or invalid format');
+          }
         } else {
-          _error = response.message;
+          _error = response.message ?? 'Gagal memuat data kursi';
+          print('❌ Error: $_error');
         }
         _isLoading = false;
       });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'Terjadi kesalahan: $e';
+        _isLoading = false;
+      });
+      print('❌ Exception: $e');
     }
   }
 
@@ -218,7 +257,7 @@ class _TrainSeatSelectionScreenState extends State<TrainSeatSelectionScreen> {
           const SizedBox(width: 16),
           _buildLegendItem('Dipilih', AppTheme.primaryBlue, Colors.white),
           const SizedBox(width: 16),
-          _buildLegendItem('Tidak Tersedia', AppTheme.lightGrey, AppTheme.grey),
+          _buildLegendItem('Sudah Dipesan', AppTheme.lightGrey, AppTheme.grey),
         ],
       ),
     );
@@ -237,13 +276,12 @@ class _TrainSeatSelectionScreenState extends State<TrainSeatSelectionScreen> {
           ),
         ),
         const SizedBox(width: 4),
-        Text(label, style: TextStyle(fontSize: 11, color: AppTheme.grey)),
+        Text(label, style: TextStyle(fontSize: 10, color: AppTheme.grey)),
       ],
     );
   }
 
   Widget _buildSeatLayout() {
-    // Layout 2-2
     final columns = 4;
     final rows = (_seats.length / columns).ceil();
 
@@ -252,13 +290,11 @@ class _TrainSeatSelectionScreenState extends State<TrainSeatSelectionScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // Train icon
             Container(
               padding: const EdgeInsets.all(8),
               child: const Icon(Icons.train, size: 32, color: AppTheme.grey),
             ),
             const SizedBox(height: 8),
-            // Seat grid
             ...List.generate(rows, (rowIndex) {
               final startIndex = rowIndex * columns;
               final endIndex = (startIndex + columns) > _seats.length
@@ -271,13 +307,11 @@ class _TrainSeatSelectionScreenState extends State<TrainSeatSelectionScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Left side (2 seats)
                     ...rowSeats
                         .sublist(0, rowSeats.length > 2 ? 2 : rowSeats.length)
                         .map((seat) {
                           return _buildSeatWidget(seat);
                         }),
-                    // Aisle
                     if (rowSeats.length > 2)
                       Container(
                         width: 20,
@@ -290,12 +324,10 @@ class _TrainSeatSelectionScreenState extends State<TrainSeatSelectionScreen> {
                           ),
                         ),
                       ),
-                    // Right side (2 seats)
                     if (rowSeats.length > 2)
                       ...rowSeats.sublist(2).map((seat) {
                         return _buildSeatWidget(seat);
                       }),
-                    // Empty placeholders
                     if (rowSeats.length < 2)
                       ...List.generate(
                         2 - rowSeats.length,
@@ -311,7 +343,6 @@ class _TrainSeatSelectionScreenState extends State<TrainSeatSelectionScreen> {
               );
             }),
             const SizedBox(height: 16),
-            // Info kursi yang dipilih
             if (_selectedSeatIds.isNotEmpty)
               Container(
                 padding: const EdgeInsets.all(12),
@@ -348,13 +379,18 @@ class _TrainSeatSelectionScreenState extends State<TrainSeatSelectionScreen> {
     final seatId = seat['id'] ?? 0;
     final seatCode = seat['seat_code'] ?? '?';
     final isAvailable = seat['is_available'] ?? false;
+    final isBooked = seat['is_booked'] ?? false;
     final isSelected = _selectedSeatIds.contains(seatId);
 
     Color bgColor;
     Color textColor;
     bool isClickable;
 
-    if (isSelected) {
+    if (isBooked) {
+      bgColor = AppTheme.lightGrey;
+      textColor = AppTheme.grey;
+      isClickable = false;
+    } else if (isSelected) {
       bgColor = AppTheme.primaryBlue;
       textColor = Colors.white;
       isClickable = true;
@@ -388,11 +424,13 @@ class _TrainSeatSelectionScreenState extends State<TrainSeatSelectionScreen> {
           color: bgColor,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isSelected
-                ? AppTheme.primaryBlue
-                : (isAvailable
-                      ? AppTheme.primaryBlue.withOpacity(0.3)
-                      : AppTheme.grey.withOpacity(0.3)),
+            color: isBooked
+                ? AppTheme.grey.withOpacity(0.3)
+                : (isSelected
+                      ? AppTheme.primaryBlue
+                      : (isAvailable
+                            ? AppTheme.primaryBlue.withOpacity(0.3)
+                            : AppTheme.grey.withOpacity(0.3))),
             width: isSelected ? 2 : 1,
           ),
           boxShadow: isSelected ? AppTheme.cardShadow : null,
@@ -428,38 +466,77 @@ class _TrainSeatSelectionScreenState extends State<TrainSeatSelectionScreen> {
       ),
       child: Column(
         children: [
-          if (_selectedSeatIds.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Total', style: AppTheme.heading4),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        AppHelpers.formatCurrency(totalPrice.toDouble()),
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.primaryBlue,
-                        ),
+                  Text('Kursi Tersisa', style: AppTheme.bodySmall),
+                  Text(
+                    '$_availableSeats kursi',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: _availableSeats > 0
+                          ? AppTheme.success
+                          : AppTheme.error,
+                    ),
+                  ),
+                ],
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text('Total', style: AppTheme.bodySmall),
+                  Text(
+                    AppHelpers.formatCurrency(totalPrice.toDouble()),
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.primaryBlue,
+                    ),
+                  ),
+                  if (_selectedSeatIds.isNotEmpty)
+                    Text(
+                      '${_selectedSeatIds.length} kursi × ${AppHelpers.formatCurrency(widget.price.toDouble())}',
+                      style: AppTheme.bodySmall,
+                    ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (_availableSeats == 0)
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.error.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppTheme.error),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.warning, color: AppTheme.error),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Maaf, kursi sudah habis. Silahkan pilih jadwal lain.',
+                      style: TextStyle(
+                        color: AppTheme.error,
+                        fontWeight: FontWeight.w600,
                       ),
-                      Text(
-                        '${_selectedSeatIds.length} kursi × ${AppHelpers.formatCurrency(widget.price.toDouble())}',
-                        style: AppTheme.bodySmall,
-                      ),
-                    ],
+                    ),
                   ),
                 ],
               ),
             ),
+          const SizedBox(height: 8),
           CustomButton(
             text: _selectedSeatIds.isEmpty
                 ? 'Pilih Kursi Terlebih Dahulu'
                 : 'Lanjutkan ke Pembayaran',
-            onPressed: _selectedSeatIds.isEmpty
+            onPressed: _selectedSeatIds.isEmpty || _availableSeats == 0
                 ? null
                 : () => _navigateToCheckout(totalPrice),
             isFullWidth: true,

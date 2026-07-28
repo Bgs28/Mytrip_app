@@ -1,6 +1,6 @@
 {{-- resources/views/admin/layouts/sidebar.blade.php --}}
 
-<aside id="sidebar" class="w-64 bg-blue-900 text-white flex flex-col shadow-xl fixed md:relative inset-y-0 left-0 z-50 hidden md:flex h-screen">
+<aside id="sidebar" class="w-64 bg-blue-900 text-white flex flex-col shadow-xl fixed inset-y-0 left-0 z-50 -translate-x-full md:translate-x-0 transition-transform duration-200 h-screen">
     <!-- Header Sidebar -->
     <div class="p-4 md:p-5 border-b border-blue-800 flex items-center justify-between flex-shrink-0">
         <h1 class="text-lg md:text-xl font-bold tracking-wider">
@@ -194,8 +194,7 @@
     function openSidebar() {
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('sidebarOverlay');
-        sidebar.classList.remove('hidden');
-        sidebar.classList.add('fixed', 'inset-y-0', 'left-0', 'z-50');
+        sidebar.classList.remove('-translate-x-full');
         overlay.classList.remove('hidden');
         document.body.style.overflow = 'hidden';
     }
@@ -203,8 +202,7 @@
     function closeSidebar() {
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('sidebarOverlay');
-        sidebar.classList.add('hidden');
-        sidebar.classList.remove('fixed', 'inset-y-0', 'left-0', 'z-50');
+        sidebar.classList.add('-translate-x-full');
         overlay.classList.add('hidden');
         document.body.style.overflow = '';
     }
@@ -222,13 +220,12 @@
         });
     });
 
-    // Handle responsive
+    // Handle responsive: reset translate state when resizing to desktop
     window.addEventListener('resize', function() {
         if (window.innerWidth >= 768) {
-            closeSidebar();
-            const sidebar = document.getElementById('sidebar');
-            sidebar.classList.remove('fixed', 'inset-y-0', 'left-0', 'z-50');
-            sidebar.classList.remove('hidden');
+            const overlay = document.getElementById('sidebarOverlay');
+            overlay.classList.add('hidden');
+            document.body.style.overflow = '';
         }
     });
 </script>

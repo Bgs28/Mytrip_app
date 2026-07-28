@@ -1,4 +1,4 @@
-// lib/models/bus.dart
+// lib/models/bus.dart - Update parsing price
 class Bus {
   final int id;
   final String busName;
@@ -7,7 +7,7 @@ class Bus {
   final String departureTime;
   final int price;
   final int seat;
-  final String? status; // Tambahkan field status
+  final String? status;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -19,13 +19,12 @@ class Bus {
     required this.departureTime,
     required this.price,
     required this.seat,
-    this.status, // Tambahkan status
+    this.status,
     required this.createdAt,
     required this.updatedAt,
   });
 
   factory Bus.fromJson(Map<String, dynamic> json) {
-    // Helper function untuk convert ke int dengan aman
     int parseToInt(dynamic value) {
       if (value == null) return 0;
       if (value is int) return value;
@@ -38,6 +37,19 @@ class Bus {
       return 0;
     }
 
+    DateTime parseDate(dynamic value) {
+      if (value == null) return DateTime.now();
+      if (value is DateTime) return value;
+      if (value is String) {
+        try {
+          return DateTime.parse(value);
+        } catch (e) {
+          return DateTime.now();
+        }
+      }
+      return DateTime.now();
+    }
+
     return Bus(
       id: json['id'] ?? 0,
       busName: json['bus_name'] ?? '',
@@ -46,28 +58,9 @@ class Bus {
       departureTime: json['departure_time'] ?? '',
       price: parseToInt(json['price']),
       seat: parseToInt(json['seat']),
-      status: json['status'] ?? 'active', // Ambil status dari JSON
-      createdAt: json['created_at'] != null
-          ? DateTime.tryParse(json['created_at']) ?? DateTime.now()
-          : DateTime.now(),
-      updatedAt: json['updated_at'] != null
-          ? DateTime.tryParse(json['updated_at']) ?? DateTime.now()
-          : DateTime.now(),
+      status: json['status'] ?? 'active',
+      createdAt: parseDate(json['created_at']),
+      updatedAt: parseDate(json['updated_at']),
     );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'bus_name': busName,
-      'from': from,
-      'destination': destination,
-      'departure_time': departureTime,
-      'price': price,
-      'seat': seat,
-      'status': status,
-      'created_at': createdAt.toIso8601String(),
-      'updated_at': updatedAt.toIso8601String(),
-    };
   }
 }
